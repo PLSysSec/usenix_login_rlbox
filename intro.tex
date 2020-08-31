@@ -32,6 +32,8 @@ can simply sandbox third party libraries.
 This simple pattern isolates each library in its own region memory ensuring 
 that memory safety bugs in a third party library does not affect the host 
 application.
+%
+\Red{examples for mitigations for stagefright etc.}
 
 Despite the simplicity of this solution and its extensive study in academic 
 literature, it is not common to see this pattern in real world applications.
@@ -119,3 +121,31 @@ cases of OpenSSH by Provos et al. or the use of multiple processes in browsers,
 we focus on how we can improve security while retaining the existing 
 architecture of your application.
 
+Such design patterns have not commonly existed prior to this work, and this has 
+had interesting ramifications on wider adoption.
+%
+Specifically, the developer guidelines put out by Apple, Windows, Android etc. 
+or even the best practice guidelines of specific languages cannot include 
+general guidelines on using sandboxing in applications.
+%
+Thus, even more than performance or tooling concerns, this lack of design 
+patterns has hindered wider adoption of sandboxing in applications.
+
+These design patterns focus on the problem of handling an untrusted piece of 
+code or data.
+%
+Indeed the need for such design patterns is not just limited to sandboxing; 
+several common security boundaries share very similar challenges. 
+%
+For example, the OS kernel-userspace boundary, the boundary between an 
+application running in a trusted execution environment and the OS, and even the 
+simple case of ensuring that user input is safely handled by an application 
+share similar challenges, and can benefit from such design patterns.
+
+We can imagine that if such patterns were more easily available, this could 
+prompt programming language designers, compiler writers and application SDK 
+maintainers to provide first class support for sandboxing in languages, 
+prompting wider use and securing large amounts of applications.
+%
+It is thus worth understanding precisely where the challenge in including 
+sandboxes in applications lie.
