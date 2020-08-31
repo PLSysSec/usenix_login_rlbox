@@ -1,0 +1,225 @@
+%\newif\ifExtended\Extendedfalse
+\newif\ifExtended\Extendedtrue
+
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix2019_v3}
+
+\usepackage[square,comma,numbers,sort&compress]{natbib}
+\usepackage{listings}
+% \usepackage[usenames, dvipsnames]{color}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{minted}
+%\usepackage[finalizecache,cachedir=.]{minted}
+%\usepackage[frozencache,cachedir=.]{minted}
+\usepackage{inconsolata}
+\usepackage{algorithm}
+\usepackage{nameref}
+\usepackage{graphicx}
+\usepackage{times}
+\usepackage{xspace}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage[export]{adjustbox}
+\usepackage{pbox}
+\usepackage{multirow}
+%% IF WE NEED space
+\usepackage{titling}
+\usepackage[all=normal,paragraphs=tight,floats=tight]{savetrees}
+\usepackage[compact,nonindentfirst]{titlesec}
+
+\newcommand{\Red}[1]{{\color{red} #1}}
+\newcommand{\ignore}[1]{}
+\newcommand{\Response}[1]{{\color{blue} #1}}
+\newcommand{\todo}[1]{\Red{\textbf{TODO[}#1\textbf{]}}}
+\newcommand{\tocite}[1]{\Red{CITE:\cite{#1}}}
+\newcommand{\toref}[1]{\Red{REF:\ref{#1}}}
+\newcommand{\para}[1]{\smallskip\noindent\textbf{{#1.}\xspace}}
+
+\newcommand{\parasub}[1]{\smallskip\noindent\textit{{#1:}\xspace}}
+
+\newcommand{\vtainted}{\code{tainted_volatile}\xspace}
+\newcommand{\vtaintedW}[1]{\code{tainted_volatile<#1>}\xspace}
+\newcommand{\tainted}{\code{tainted}\xspace}
+\newcommand{\taintedW}[1]{\code{tainted<#1>}\xspace}
+\newcommand{\ftainted}{\code{tainted_freezable}\xspace}
+\newcommand{\ftaintedW}[1]{\code{tainted_freezable<#1>}\xspace}
+\newcommand{\unsafe}{\code{unsafeUnverified()}\xspace}
+
+\newcommand{\sandboxunverified}{\vtainted}
+\newcommand{\sandboxunverifiedwrapper}[1]{\vtaintedW{#1}}
+\newcommand{\unverified}{\tainted}
+\newcommand{\unverifiedwrapper}[1]{\taintedW{#1}}
+\newcommand\copyAndVerify{\code{copyAndVerify()}\xspace}
+\newcommand\verify{\code{verify()}\xspace}
+\newcommand\sys{RLBox\xspace}
+\newcommand\rlbox{\sys}
+\newcommand\libjpeg{\textsf{libjpeg}\xspace}
+\newcommand\jpeg{\libjpeg}
+\newcommand\turbo{\textsf{libjpeg-turbo}\xspace}
+\newcommand\libpng{\textsf{libpng}\xspace}
+\newcommand\png{\libpng}
+\newcommand\zlib{\textsf{zlib}\xspace}
+\newcommand\graphite{\textsf{libGraphite}\xspace}
+\newcommand\ff{Firefox\xspace}
+\newcommand\libvorbis{\textsf{libvorbis}\xspace}
+\newcommand\vorbis{\libvorbis}
+\newcommand\libtheora{\textsf{libtheora}\xspace}
+\newcommand\theora{\libtheora}
+\newcommand\libvpx{\textsf{libvpx}\xspace}
+\newcommand\vpx{\libvpx}
+
+\newcommand\libmarkdown{\textsf{libmarkdown}\xspace}
+\newcommand\modmarkdown{\textsf{mod\_markdown}\xspace}
+
+\newcommand\spicv{SPI-cv\xspace}
+\newcommand\spipin{SPI-pin\xspace}
+\newcommand\unmodffpre{stock\xspace}
+\newcommand\naivespicvffpre{Naive \spicv}
+\newcommand\naivespipinffpre{Naive \spipin}
+\newcommand\naivesfiffpre{Naive SFI\xspace}
+\newcommand\spicvffpre{RLBox \spicv}
+\newcommand\spipinffpre{RLBox \spipin}
+\newcommand\sfiffpre{RLBox SFI\xspace}
+\newcommand\unmodff{\unmodffpre Firefox\xspace}
+\newcommand\naivespiff{\naivespiffpre Firefox\xspace}
+\newcommand\naivesfiff{\naivesfiffpre Firefox\xspace}
+\newcommand\spicvff{\spicvffpre Firefox\xspace}
+\newcommand\spipinff{\spipinffpre Firefox\xspace}
+\newcommand\sfiff{\sfiffpre Firefox\xspace}
+
+\newcommand\attackdatasan{Missing data sanitizations\xspace}
+\newcommand\attackdui{Dereferencing under the influence\xspace}
+\newcommand\attackcb{Unsafe callbacks and callback state\xspace}
+\newcommand\attackaslr{Leaking ASLR\xspace}
+\newcommand\attackshared{Double fetch bugs\xspace}
+\newcommand\attackswizzle{Missing pointer swizzles\xspace}
+
+\def\dash---{\kern.16667em---\penalty\exhyphenpenalty\hskip.16667em\relax}
+
+%%%%%%% minted settings/lst %%%%%%%%
+\usemintedstyle{tango} % friendly ok
+\fvset{fontsize=\footnotesize, xleftmargin=5pt, numbersep=5pt}
+
+\usepackage{subcaption}
+\usepackage[font=small,labelfont=bf]{caption}
+% \captionsetup{belowskip=0pt}
+\setlength{\textfloatsep}{0.2cm}
+
+\def\C++{
+C\kern-.1667em\raise.30ex\hbox{\smaller{++}}%
+\spacefactor1000
+}
+
+\definecolor{xxxcolor}{rgb}{0.8,0,0}
+% \iffalse
+% \newcommand{\XXX}[1]{}
+% \else
+\newcommand{\XXX}[1] {{\color{xxxcolor} XXX: #1}\xspace}
+% \fi
+
+\lstset{language=C++,
+  keywordstyle=\color{blue},
+  stringstyle=\color{red},
+  commentstyle=\color{gray},
+  morecomment=[l][\color{magenta}]{\#},
+  breaklines=true,
+  basicstyle=\footnotesize\ttfamily,
+  escapechar=|
+}
+% \newcommand{\code}[1]{\lstinline[columns=fixed,mathescape,language=C,basicstyle=\ttfamily]{#1}}
+\newcommand{\code}[1]{\mintinline[breaklines, breakafter= , 
+fontsize=\small]{cpp}{#1}}
+\newcommand{\smallcode}[1]{\mintinline[fontsize=\small]{cpp}{#1}}
+\newcommand{\footnotecode}[1]{\mintinline[fontsize=\footnotesize]{cpp}{#1}}
+\newcommand{\largecode}[1]{\mintinline[fontsize=\large]{cpp}{#1}}
+
+\newenvironment{CompactItemize}%
+  {\begin{list}{$\blacktriangleright$}%
+    {\leftmargin=\parindent \itemsep=2pt \topsep=2pt
+     \parsep=0pt \partopsep=0pt}}%
+  {\end{list}}
+\renewcommand{\labelitemi}{$\blacktriangleright$}
+
+%needs \usepackage{enumitem}
+\newenvironment{CompactEnumerate}{
+\begin{enumerate}[leftmargin=*]
+}{\end{enumerate}}
+
+% don't want date printed
+\date{\vspace{-1em}}
+\hypersetup{breaklinks=true}
+
+% \makeatletter
+% \renewcommand{\paragraph}{%
+%   \@startsection{paragraph}{4}%
+%   {\z@}{1.25ex \@plus 1ex \@minus .2ex}{-1em}%
+%   {\normalfont\normalsize\bfseries}%
+% }
+% \makeatother
+
+% \frenchspacing
+
+
+\ifExtended
+\newcommand{\appref}[2]{Appendix~\ref{#2}\xspace}
+\else
+\newcommand{\appref}[2]{Appendix~{#1} of~\cite{extended}\xspace}
+\fi
+
+\ifExtended
+\else
+\pagenumbering{gobble}
+\fi
+\begin{document}
+
+\setlength{\droptitle}{-2em}
+
+\title{Sandboxing for the people\vspace{-1.2em}}
+
+
+\newcommand{\ucsdmark}{{$^{\dagger}$}\xspace}
+\newcommand{\stanmark}{{$^{\ast}$}}
+\newcommand{\mozmark}{{$^{\diamond}$}\xspace}
+\newcommand{\utmark}{{$^{\star}$}\xspace}
+
+
+\author{
+    Shravan Narayan\ucsdmark
+    \quad
+    Tal Garfinkel\stanmark
+    \quad
+    \quad
+    Hovav Shacham$^{\star,\dagger}$
+    \quad
+    Deian Stefan\ucsdmark
+    \\
+    \small{
+      \ucsdmark{UC San Diego}\qquad
+      \stanmark{Stanford}\qquad
+      %\mozmark{Mozilla}\qquad
+      \utmark{UT Austin}\qquad
+    }
+} % end author
+
+\maketitle
+
+\input{intro}
+
+
+{
+% \Urlmuskip=0mu plus 1mu\relax
+% \footnotesize
+\fontsize{7}{8}\selectfont
+\setlength{\bibsep}{3pt}
+%\raggedright
+% \frenchspacing
+\bibliographystyle{abbrv}
+\bibliography{local}
+}
+
+
+\end{document}
