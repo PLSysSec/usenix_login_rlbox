@@ -33,7 +33,8 @@ This simple pattern isolates each library in its own region memory ensuring
 that memory safety bugs in a third party library does not affect the host 
 application.
 %
-\Red{examples for mitigations for stagefright etc.}
+\Red{examples for mitigations for stagefright etc. and the impact this may have 
+on apps like whatsapp, signal etc.}
 
 Despite the simplicity of this solution and its extensive study in academic 
 literature, it is not common to see this pattern in real world applications.
@@ -126,21 +127,23 @@ had interesting ramifications on wider adoption.
 %
 Specifically, the developer guidelines put out by Apple, Windows, Android etc. 
 or even the best practice guidelines of specific languages cannot include 
-general guidelines on using sandboxing in applications.
+general guidelines on when to use sandboxing in applications, or how to migrate 
+an existing application to use sandboxing.
 %
 Thus, even more than performance or tooling concerns, this lack of design 
 patterns has hindered wider adoption of sandboxing in applications.
 
-These design patterns focus on the problem of handling an untrusted piece of 
-code or data.
+These design patterns focus on incrementally and systematically solving the 
+problem of handling an untrusted piece of code or data.
 %
 Indeed the need for such design patterns is not just limited to sandboxing; 
 several common security boundaries share very similar challenges. 
 %
 For example, the OS kernel-userspace boundary, the boundary between an 
-application running in a trusted execution environment and the OS, and even the 
-simple case of ensuring that user input is safely handled by an application 
-share similar challenges, and can benefit from such design patterns.
+application running in a trusted execution environment and the OS, sanitizing 
+data from remote procedure calls (RPCs), and even the simple case of ensuring 
+that user input is safely handled by an application share similar challenges, 
+and can benefit from such design patterns.
 
 We can imagine that if such patterns were more easily available, this could 
 prompt programming language designers, compiler writers and application SDK 

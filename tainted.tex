@@ -1,1 +1,26 @@
 \section{Tainted types to the rescue}
+
+\Red{
+Notes - Wrap data from the sandbox. But this is not all! Tainted types 
+must make an effort to permit some benign operations, automate security 
+checks. Else this is not simplified the problem in any way. In fact the 
+goal is to push off security checks to as late as possible --- this is 
+what actually simplifies the security checks.
+
+Tainted types also provide an avenue to address some orthogonal 
+practical challenges, namely ABI differences and incremental porting.
+
+--------
+
+Perhaps formulate this section as a series of design patterns 
+
+Design pattern 1: Wrap untrusted data
+
+Design pattern 2: Allow benign operations. Tainted computations.
+
+Design pattern 3: Automate common security checks.
+
+Design pattern 4: Provide a null sandbox. Key to incremental porting 
+and downstream sandboxing.
+
+}
