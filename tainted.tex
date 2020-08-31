@@ -1,11 +1,20 @@
 \section{Tainted types to the rescue}
 
+\para{Design pattern 1:} Wrap untrusted data in \tainted 
+type.\medskip\\
+%
+This means that when calling a function in the sandboxed library that 
+returns in \code{int}, this must return a \taintedW{int} instead.
+%
+This also applies to 
+
 \Red{
 
 Design pattern 1: Wrap untrusted data in a \tainted type providing a 
 monadic interface. Can disallow potentially unsafe operations like 
 branching on \tainted data. Can also integrate with ideas interface 
-types (like typescript library for interfaces but with contracts), 
+types or C++'s contract proposals (like typescript library for 
+interfaces but with contracts), 
 Also applies to other security boundaries. Managing untrusted data from 
 userspace in the kernel - compare to cqual kernel paper. Managing 
 untrusted data from syscalls in sgx apps - compare to attacks in tale 
@@ -35,8 +44,11 @@ impacting perf. However, an automatic ABI conversion would allow you to
 apply this to selectively to higher risk components and having \tainted 
 types perform the ABI conversions on boundary crossings.
 
-Design pattern 4: Allow benign operations. Tainted computations. Allows 
-pushing validators further into code. This in turn allows converting 
+Design pattern 4: Allow benign operations. Tainted computations. This 
+allows the user to retain the syntax of the language --- you don't have 
+to have custom constructs or have to unwrap data before doing anything 
+with data. More importantly allows pushing validators further into 
+code. This in turn allows converting 
 checking of library invariants to application invariants, which are 
 much easier to enforce. Give example of PNG. This additionally allows 
 automatic lazy marshaling of data and lazy ABI conversions (see point 
@@ -48,7 +60,16 @@ Design pattern 5: Automate common security checks on tainted types.
 Some domains allow automated checks. FOr example dereferencing a 
 tainted pointer during sandboxing.
 
-Design pattern 6: Provide a null sandbox. Key to incremental porting 
-and downstream sandboxing.
+Design pattern 6: Provide a clearly marked escape hatch that removed 
+the tainted wrapper. This is key to incremental porting. In fact in the 
+sandboxing case, we provide an additional escape hatch as well called 
+the null sandbox. This is necessary so that ABI differences don't 
+affect incremental porting, but additionally and allows a 
+compile/runtime setting to turn off sandboxing depending on 
+requirement. This also allows for downstream sandboxing.
 
+Optional design pattern 7: Only allow tainted pointers as parameters to 
+sandboxed function calls. This prevents complicated marshalling 
+requirements for nested data structures going in. Same thing for 
+callback returns.
 }
