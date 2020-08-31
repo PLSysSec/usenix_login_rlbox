@@ -1,26 +1,54 @@
 \section{Tainted types to the rescue}
 
 \Red{
-Notes - Wrap data from the sandbox. But this is not all! Tainted types 
-must make an effort to permit some benign operations, automate security 
-checks. Else this is not simplified the problem in any way. In fact the 
-goal is to push off security checks to as late as possible --- this is 
-what actually simplifies the security checks.
 
-Tainted types also provide an avenue to address some orthogonal 
-practical challenges, namely ABI differences and incremental porting.
+Design pattern 1: Wrap untrusted data in a \tainted type providing a 
+monadic interface. Can disallow potentially unsafe operations like 
+branching on \tainted data. Can also integrate with ideas interface 
+types (like typescript library for interfaces but with contracts), 
+Also applies to other security boundaries. Managing untrusted data from 
+userspace in the kernel - compare to cqual kernel paper. Managing 
+untrusted data from syscalls in sgx apps - compare to attacks in tale 
+of two worlds paper.
 
---------
 
-Perhaps formulate this section as a series of design patterns 
+Design pattern 2: Construct APIs around tainted types.
+This can be apply to all user input apis in a lang std library 
+such as scanf, getline etc. This would certainly put some types of user 
+validation bugs in more sharp focus - sql injection, path traversal 
+bugs, regex DOS attacks. Languages and libraries could also safely 
+provide APIs that consume tainted data in place of requiring validators 
+--- a tainted regex should be processed by the poly time algorithm, 
+rather than one with an exponential worst case
 
-Design pattern 1: Wrap untrusted data
+Design pattern 3: Use a separate \vtainted type for memory under 
+attacker control. Allows running checkers for TOCTOU and double fetch. 
+Can also leverage things like Intel transactional memory to ``freeze'' 
+the memory. This also provides an clear avenue for ABI 
+conversions---\vtainted is always represented in the ABI of the 
+sandboxed component while \tainted uses the application ABI. This 
+automatic ABI conversion is super useful---SFI compilers have different 
+ABIs. Additionally consider use of other security lowfat pointers, or 
+even hardware features CHERI. It may not be possible to migrate your 
+entire application to use this without breaking compatibility, or 
+impacting perf. However, an automatic ABI conversion would allow you to 
+apply this to selectively to higher risk components and having \tainted 
+types perform the ABI conversions on boundary crossings.
 
-Design pattern 2: Allow benign operations. Tainted computations.
+Design pattern 4: Allow benign operations. Tainted computations. Allows 
+pushing validators further into code. This in turn allows converting 
+checking of library invariants to application invariants, which are 
+much easier to enforce. Give example of PNG. This additionally allows 
+automatic lazy marshaling of data and lazy ABI conversions (see point 
+2). Outside of sandboxing, this is extremely useful in general RPC 
+scenarios as well---you can potentially improve performance be avoiding 
+unserializing function returns when they are not needed.
 
-Design pattern 3: Automate common security checks.
+Design pattern 5: Automate common security checks on tainted types. 
+Some domains allow automated checks. FOr example dereferencing a 
+tainted pointer during sandboxing.
 
-Design pattern 4: Provide a null sandbox. Key to incremental porting 
+Design pattern 6: Provide a null sandbox. Key to incremental porting 
 and downstream sandboxing.
 
 }
