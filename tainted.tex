@@ -1,34 +1,25 @@
 \section{Tainted types to the rescue}
+\label{sec:tainted}
+%
+In this section, we introduce several design patterns that are employed the 
+\sys sandboxing APIs.
+%
+These design patterns allow the \sys APIs to ensure that untrusted data cannot 
+be misused by application developers without too much additional burden or 
+modification of application code.
+%
+Furthermore, they also allow incremental migration of the application code to 
+use sandboxed libraries. 
+%
+We discuss the role of these design patterns in the \sys APIs in more detail 
+below; we also generalize these design patterns and show how they may be 
+applied to other related problem domains.
 
-\para{Design pattern 1:} Wrap untrusted data in \tainted 
-type.\medskip\\
-%
-This means that when calling a function in the sandboxed library that 
-returns in \code{int}, this must return a \taintedW{int} instead.
-%
-This also applies to 
+\input{design-tainted}
+
+\input{design-tainted-apis}
 
 \Red{
-
-Design pattern 1: Wrap untrusted data in a \tainted type providing a 
-monadic interface. Can disallow potentially unsafe operations like 
-branching on \tainted data. Can also integrate with ideas interface 
-types or C++'s contract proposals (like typescript library for 
-interfaces but with contracts), 
-Also applies to other security boundaries. Managing untrusted data from 
-userspace in the kernel - compare to cqual kernel paper. Managing 
-untrusted data from syscalls in sgx apps - compare to attacks in tale 
-of two worlds paper.
-
-
-Design pattern 2: Construct APIs around tainted types.
-This can be apply to all user input apis in a lang std library 
-such as scanf, getline etc. This would certainly put some types of user 
-validation bugs in more sharp focus - sql injection, path traversal 
-bugs, regex DOS attacks. Languages and libraries could also safely 
-provide APIs that consume tainted data in place of requiring validators 
---- a tainted regex should be processed by the poly time algorithm, 
-rather than one with an exponential worst case
 
 Design pattern 3: Use a separate \vtainted type for memory under 
 attacker control. Allows running checkers for TOCTOU and double fetch. 

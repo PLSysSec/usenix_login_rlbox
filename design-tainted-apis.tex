@@ -1,0 +1,40 @@
+
+\Red{
+  Design pattern 2: Construct APIs around tainted types.
+  This can be apply to all user input apis in a lang std library 
+  such as scanf, getline etc. This would certainly put some types of user 
+  validation bugs in more sharp focus - sql injection, path traversal 
+  bugs, regex DOS attacks. Languages and libraries could also safely 
+  provide APIs that consume tainted data in place of requiring validators 
+  --- a tainted regex should be processed by the poly time algorithm, 
+  rather than one with an exponential worst case
+
+}
+
+\para{Design pattern 2: Construct APIs with \tainted types}
+%
+Consider the validator required for the following piece of code.
+%
+\begin{minted}[linenos=false, breaklines=true, mathescape=true,
+escapeinside=||]{cpp}
+tainted<char*> src = invoke_sbx_func(sandbox_get_src);
+tainted<char*> dst = invoke_sbx_func(sandbox_get_dst);
+unsigned int num = ...;
+
+memcpy(dst.verify(??), src.verify(??), num);
+\end{minted}
+%
+Here the application code retrieves the location of some source and destination 
+byte buffer located in sandbox memory and must transfer a certain number of 
+bytes between them.
+%
+To use \code{memcpy}, the application developer must apply some validation to 
+the \code{dst} and \code{src} buffers.
+%
+In this case, the validation check is a more subtle than it may appear---to 
+ensure that \code{memcpy} does not inadvertently read or write application 
+memory, the validation check must ensure that both \code{dst + num} and 
+\code{src + num} is inside sandbox memory \emph{and} that the addition 
+operation has not overflowed.
+%
+Rather than requiring application developers to 
