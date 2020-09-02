@@ -4,7 +4,8 @@
 In this section, we introduce several design patterns that are employed the 
 \sys sandboxing APIs.
 %
-These design patterns allow the \sys APIs to ensure that untrusted data cannot 
+These design patterns center around the use of \tainted---a simple wrapper 
+types that allow the \sys APIs to ensure that untrusted data cannot 
 be misused by application developers without too much additional burden or 
 modification of application code.
 %
@@ -12,8 +13,8 @@ Furthermore, they also allow incremental migration of the application code to
 use sandboxed libraries. 
 %
 We discuss the role of these design patterns in the \sys APIs in more detail 
-below; we also generalize these design patterns and show how they may be 
-applied to other related problem domains.
+below; we also generalize these design patterns and show how wrapper types may 
+be leveraged to solve challenges in related problem domains.
 
 \input{design-tainted}
 
