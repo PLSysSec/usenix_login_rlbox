@@ -56,21 +56,33 @@ sandboxing.
 
 # Sandboxing libraries with RLBox
 
-RLBox is a C++ framework for ...
+RLBox is a C++ framework that helps developers migrate and maintain code in
+application to safely use sandboxed libraries.
 
 ## Why do we need a framework?
 
-The applications-library boundary is tighly coupled and, as a result, it's
-easy to introduce security bugs when breaking this boundary to now consider
-the sandbox untrusted. + motivation for engineering effort
+The applications-library boundary is tighly coupled and by default application
+code is written assuming libraries are trusted. To benefit from sandboxing
+requires changing our threat model to assume libraries are untrusted, and modify
+the renderer-library interface accordingly (e.g, to sanitize untrusted inputs).
 
-### Address confused deputy attacks
-### Address sandboxing engineering effort 
+While migrating to this model we made numerous mistakes—overlooking attack
+vectors and discovering many bugs only after building RLBox to help detect them.
+We present a few illustrative examples below.
+
+!!!!TODO!!!!
+
+### Eliminating confused deputy attacks
+
+!!!!TODO!!!!
+
+### Minimizing sandboxing engineering effort
+
 - noop sandbox for porting and downstream
 - incremental porting
 - ABI compat
 
-### Leveraging advances in hardware isolation
+### Leveraging advances in SFI and hardware isolation
 
 - perf profiles for differnet things
 - experiment with new hardware features - mpk, cheri; make this fit:
@@ -82,7 +94,7 @@ the use of multiple protection domains without prohibitive overheads, and
 emerging architecture features such as Intel MPK and ARM-Cheri allow
 in-process isolation with very low overhead.
 
-## Beyond sandboxing
+## Applications beyond sandboxing
 
 These problems are not exclusive to sandboxing.
 
@@ -91,6 +103,7 @@ These problems are not exclusive to sandboxing.
 - IPC layer in FF
 
 Moreover, RLBox's tainted types can used anywhere we handle untrusted content.
+
 - SQLi
 - XSS (TrustedTypes)
 
