@@ -7,7 +7,7 @@ for developer productivity, this is also a security nightmare. Third party
 libraries, today, are completely trusted and, unfortunately, this means that
 bugs in any library can be easily exploited to compromise the entire
 application. Even more worrisome, attacks on software supply chains are
-becoming more prevealent: attackers are compromising (and sometimes buying)
+becoming more prevalent: attackers are compromising (and sometimes buying)
 the accounts of software maintainers to slip backdoored code into popular
 libraries.
 
@@ -17,7 +17,7 @@ exploits. Many libraries do not require complete trust for applications to
 safely use their functionality. For example, image decoders like libjpeg and
 libpng don't need access to anything but the image buffers they operates on,
 OpenSSL doesn't need access to anything but the socket it's reading from and
-the bytstream it's writing the decrypted HTTP stream to, and spell checkers
+the bytestream it's writing the decrypted HTTP stream to, and spell checkers
 like Hunspell don't need access to anything but dictionary files and the
 string it's spell checking. (These are just a few examples, however, we
 believe many other examples abound.) This implicit separation of privilege
@@ -42,7 +42,7 @@ WhatsApp, and iMessage), servers and runtimes (e.g., Apache and Node.js,),
 and enterprise tools (e.g., Zoom, Slack, and VS Code) also rely on third
 party libraries for various tasks---from media rendering, to parsing network
 protocols like HTTP, to image processing (e.g., to blur faces), spell
-checking, and aumated text completion. Frameworks like RLBox can help these
+checking, and automated text completion. Frameworks like RLBox can help these
 applications eliminate such libraries from their trusted computing base.
 
 In the rest of this article we will lay out the path to making library
@@ -61,7 +61,7 @@ application to safely use sandboxed libraries.
 
 ## Why do we need a framework?
 
-The applications-library boundary is tighly coupled and by default application
+The applications-library boundary is tightly coupled and by default application
 code is written assuming libraries are trusted. To benefit from sandboxing
 requires changing our threat model to assume libraries are untrusted, and modify
 the renderer-library interface accordingly (e.g, to sanitize untrusted inputs).
@@ -171,16 +171,16 @@ experimentation with many new hardware features. We discuss this next.
 
 As discussed RLBox's design allows it to be agnostic to the memory isolation
 technique. For example, consider Intel's Memory Protection Key features (MPK)
-which allow very effecient sandboxing of components. It would straightforward to
+which allow very efficient sandboxing of components. It would straightforward to
 implement RLBox support to use MPK as the isolation mechanism.
 
-RLBox, also allows leveraging more complicated hardware security mechansims. For
+RLBox, also allows leveraging more complicated hardware security mechanisms. For
 instance consider ARM Cheri, which is a hardware feature that converts pointers
 into capabilities that apply bounds checks. Since this feature expands the size
 of pointers it may not be easy to deploy for all applications especially if the
-increased pointer size introduces compatiblities. Furthermore it would not be
-easy to apply this to just a portion of the code as any datastructures from this
-portion of code would have ABI incompatibilties with the rest of the
+increased pointer size introduces incompatiblities. Furthermore it would not be
+easy to apply this to just a portion of the code as any data-structures from
+this portion of code would have ABI incompatibilties with the rest of the
 application. However, since the RLBox can automatically adjust for ABI
 differences, applications can straightforwardly use Cheri to secure a single
 component in an application.
@@ -188,20 +188,50 @@ component in an application.
 Finally, consider Intel TSX which provides hardware support for transactional
 memory. RLBox can leverage this feature to prevent time-of-check-time-of-use and
 double-fetch attacks. This would potentially allow some speedup over the current
-approach, which makes a copy of data before performaing any validation.
+approach, which makes a copy of data before performing any validation.
+
+Readers may have spotted that the problems addressed by RLBox are in no
+way exclusive to the sandboxing space. We discuss this next.
 
 ## Applications beyond sandboxing
 
-These problems are not exclusive to sandboxing.
+Although RLBox focusses on sandboxing, RLBox tackles a more general
+problem---enabling the interaction of trusted and untrusted code while handling
+associated problems such as enforcing invariants on control flow and shared data
+structure, handling confused deputy attacks, ABI related incompatibilities etc.
+Thus, we believe RLBox's techniques can be used in many additional scenarios and
+we discuss a few of these below.
 
-- SGX
-- Kernels
-- IPC layer in FF
+TEE runtimes: Applications running on the trusted execution environments such as
+Intel SGX must frequently interface with untrusted code; indeed code from the
+host OS is also untrusted in this context. In fact, when reviewing a variety of
+TEE runtimes that facilitate communication with the untrusted OS, Van Bulck et
+al.!!!\cite{two-worlds-sgx}!!! discovered that almost all frameworks have bugs
+pertaining to use of unchecked data---bugs that RLBox would prevent by
+construction. In face we believe, that RLBox may be used to help solve these
+problems in TEE runtimes with little to no modification.
 
-Moreover, RLBox's tainted types can used anywhere we handle untrusted content.
+OS kernels: Operating system kernel code frequently handles userspace pointers,
+but must be careful to never dereference them before checking. In fact, prior
+work !!!cite{cqual-kernel-ptr}!!! has extended compiler support for C's
+attributes to achieve the same affect of having a wrapped type.
 
-- SQLi
-- XSS (TrustedTypes)
+Browser IPC layers: Modern browsers employ multiple processes to reduce their
+security surface and to employ features such as site-isolation. This
+architecture means that data often has to be transferred back and forth between
+various processes some of which are potentially compromised. Thus RLBox can be
+used to mark this data as tainted. Additionally, use of RLBox also automatically
+provides lazy marshalling of data, which in turn eliminates marshalling of any
+unused data.
+
+Handling untrusted user inputs: Even more generally, there is a large class of
+bugs that stem for unsanitized data being used without validation. RLBox
+addresses this challenge in the context of sandboxing with tainted types and
+required validators before data use. Similar solutions employing wrapper types
+are possible and have been explored for some of these domains. For example,
+trusted types are used in JavaScript to prevent XSS. Similarly, these same
+techniques can also help with SQL injection bugs, printf unchecked format string
+bugs etc.
 
 # First-class support for tainted types and sandboxing
 
