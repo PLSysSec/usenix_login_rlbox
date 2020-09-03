@@ -72,15 +72,97 @@ We present a few illustrative examples below.
 
 !!!!TODO!!!!
 
+We built the RLBox framework to tackle these challenges. RLBox is a pure C++
+library that helps developers migrate and maintain code in application to safely
+use sandboxed libraries. RLBox does this by providing APIs to invoke sandboxed
+functions, permit callbacks into the host application and more generally
+exchange data between the sandbox and application. These APIs are built around
+tainted types---these are wrapper types used to mark data received from the
+sandboxed library and impose a simple static information flow control (IFC)
+discipline.
+
+Thus, to migrate application code from use of an unsandboxed library, to a
+sandboxed library we must simply use the RLBox API for all interactions with the
+sandboxed library.
+
+This simple design for RLBox allows us to provide several features including
+
+- Ensuring the resulting code has security checks in appropriate locations
+- Providing a systematic approach to migrating application code to the RLBox API
+  accounting for ABI differences, data marshalling etc. automatically
+- Easily enabling or disabling different isolation technologies.
+
 ### Eliminating confused deputy attacks
 
 !!!!TODO!!!!
 
 ### Minimizing sandboxing engineering effort
 
-- noop sandbox for porting and downstream
-- incremental porting
-- ABI compat
+RLBox is also explicitly designed to minimize engineering effort. For instance,
+when using the RLBox API automatically...
+
+
+!!!!! Swizzling operations, per-
+forming checks that ensure sandbox-supplied pointers point
+to sandbox memory, and identifying locations where tainted
+data must be validated is done automatically. !!!!
+
+!!!!! Talk about how we later added ABI compat here - powered by the combination
+of tainted and tainted_volatile!!!!!!
+
+RLBox allows us to migrate application code to use the RLBox API one line at a
+time. Between each change, the application can be compiled and run as before.
+While the precise approach is explained in detail in our paper, the key parts of
+RLBox that allow for is the concept of escape hatches---techniques that let us
+disable RLBox's checks for a piece of code.
+
+RLBox offers two important escape hatches.
+
+1) The UNSAFE_unverified API may be used on any tainted data to remove the
+  tainted wrapper. This allows the application code to disable tainting of data
+  when data must be passed to code that cannot handle tainted data. However, as
+  the API name indicates, the use of this API would not enforce the required
+  security checks, and is to be used only in the context of migratiging code.
+  After migration is complete, calls to UNSAFE_unverified APIs must be removed
+  or replaced with validator functions that sanitize the given data.
+
+2) The RLBox API allows the application code to choose the underlying isolation
+  mechanism including a noop sandbox option. This option simply redirects
+  function calls back to the application but wraps data as if it were received
+  from a sandboxed library. This allows us to test the data validation without
+  having to actually use a sandboxed library. But the noop sandbox plays an even
+  more important role! Since, sandboxing mechanisms such as WebAssembly have a
+  different ABI, incremental porting cannot be supported as there is no way to
+  apply ABI conversions when escape hatches such as UNSAFE_unverified were used.
+  Instead the incremental migration approach would be to use the noop sandbox
+  during incremental migration and switch to Wasm enforcement once this
+  migration is complete.
+
+
+While these features were designed with the above use cases in mind, we also
+discovered several unexpected practical benefits from the above feature set,
+including their interactions after the publication as we incorporated this more
+in production code. We discuss these below
+
+First the incremental porting greatly simplifies the code review process. For
+instance, we could commit and get reviews for partial migrations to the RLBox
+API as this do not the Firefox browser continued to build and run as before.
+Additionally, in the initial migration we simply ommitted the validators for use
+of UNSAFE_unverified APIs. This allowed to test and deploy the partial migration
+on Firefox nightly builds. We then included the data validators in a separate
+code review with additional security reviews as part of this change.
+
+Next we discovered that the noop sandbox is critical for downstream projects.
+When speaking with developers of the Tor browser, a downstream fork of the
+Firefox browser that allows anonymous browsing in the web, we found that Tor was
+open to sandbox more libraries than Firefox despite additional performance
+overhead due to their higher security requirements. However, the burden of
+maintaining a large fork of Firefox with sandboxed libraries was not an
+acceptable option. Instead, the RLBox API provides a simple option; Tor
+developers could migrate code to use the RLBox API but contribute upstream using
+the noop sandbox. They could then switch the configuration in the Tor browser to
+use an isolation mechanism that provides enforcement. Since using the noop
+sandbox little to no overherad (< 1%), this is a reasonable option.
 
 ### Leveraging advances in SFI and hardware isolation
 
