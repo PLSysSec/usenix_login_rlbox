@@ -164,17 +164,31 @@ the noop sandbox. They could then switch the configuration in the Tor browser to
 use an isolation mechanism that provides enforcement. Since using the noop
 sandbox little to no overherad (< 1%), this is a reasonable option.
 
+Indeed this flexibility in switching between memory isolation also allows easy
+experimentation with many new hardware features. We discuss this next.
+
 ### Leveraging advances in SFI and hardware isolation
 
-- perf profiles for differnet things
-- experiment with new hardware features - mpk, cheri; make this fit:
-Trends in compiler toolchains and processors architectures make efficient
-in-process isolation increasingly practical without resorting to exotic
-techniques e.g. WebAssembly is becoming a defacto standard tool chain for
-software based fault isolation, multi-core and even minion processors support
-the use of multiple protection domains without prohibitive overheads, and
-emerging architecture features such as Intel MPK and ARM-Cheri allow
-in-process isolation with very low overhead.
+As discussed RLBox's design allows it to be agnostic to the memory isolation
+technique. For example, consider Intel's Memory Protection Key features (MPK)
+which allow very effecient sandboxing of components. It would straightforward to
+implement RLBox support to use MPK as the isolation mechanism.
+
+RLBox, also allows leveraging more complicated hardware security mechansims. For
+instance consider ARM Cheri, which is a hardware feature that converts pointers
+into capabilities that apply bounds checks. Since this feature expands the size
+of pointers it may not be easy to deploy for all applications especially if the
+increased pointer size introduces compatiblities. Furthermore it would not be
+easy to apply this to just a portion of the code as any datastructures from this
+portion of code would have ABI incompatibilties with the rest of the
+application. However, since the RLBox can automatically adjust for ABI
+differences, applications can straightforwardly use Cheri to secure a single
+component in an application.
+
+Finally, consider Intel TSX which provides hardware support for transactional
+memory. RLBox can leverage this feature to prevent time-of-check-time-of-use and
+double-fetch attacks. This would potentially allow some speedup over the current
+approach, which makes a copy of data before performaing any validation.
 
 ## Applications beyond sandboxing
 
