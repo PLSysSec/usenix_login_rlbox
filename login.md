@@ -1,12 +1,9 @@
 -- Title: Lowering the barrier to in-process sandboxing
 
----ADD HERE---
---------------
-
 # Introduction
 
-Modern software makes heavy use of third-party libraries. While this key for
-developer productivity, this is also a security nightmare. Third party
+Modern software makes heavy use of third-party libraries. While this is key
+for developer productivity, this is also a security nightmare. Third party
 libraries, today, are completely trusted and, unfortunately, this means that
 bugs in any library can be easily exploited to compromise the entire
 application. Even more worrisome, attacks on software supply chains are
@@ -14,45 +11,151 @@ becoming more prevealent: attackers are compromising (and sometimes buying)
 the accounts of software maintainers to slip backdoored code into popular
 libraries.
 
-However, there is a practical alternative. Many libraries do not require
-complete trust for applications to safely use their functionality. For
-example, image decoders like libjpeg and libpng don't need access to
-anything but the image buffers they operates on, OpenSSL doesn't need access
-to anything but the socket it's reading from and the bytstream it's writing
-the decrypted HTTP stream to, and spell checkers like Hunspell don't need
-access to anything but dictionary files and the string it's spell checking.
-These are just a few examples, however, we believe many other examples
-abound.
+There is a practical alternative to today's trust-everything model: we can
+sandbox libraries and, in turn, minimize the damage due to library bugs and
+exploits. Many libraries do not require complete trust for applications to
+safely use their functionality. For example, image decoders like libjpeg and
+libpng don't need access to anything but the image buffers they operates on,
+OpenSSL doesn't need access to anything but the socket it's reading from and
+the bytstream it's writing the decrypted HTTP stream to, and spell checkers
+like Hunspell don't need access to anything but dictionary files and the
+string it's spell checking. (These are just a few examples, however, we
+believe many other examples abound.) This implicit separation of privilege
+makes libraries especially well suited for sandboxing.
 
 Unfortunately, library sandboxing has suffered from a chicken and egg
 problem. Without practical tools for sandboxing libraries with minimal
 performance overhead and engineering effort, developers and security
-engineers are not looking for these opportunities. Our own experience,
-with sandboxing libraries in Firefox reflects this. Our initial
+engineers are not looking for these opportunities. Our own experience
+sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive,
 and extremely error prone. In contrast, once we developed a mature
-framwork---RLBox---to support this activity, the incremental work to sandbox
+framework---RLBox---to support this activity, the incremental work to sandbox
 new libraries became minimal, and more opportunities to sandbox additional
 parts of the application became apparent.
 
 For example, while we began with third party font shaping libraries, now
 Firefox developers and security engineers are using RLBox for media decoding,
-spell checking, even speech synthesis. Similar opportunities exist in any
-other application domains, like secure messaging apps (e.g., Signal,
-WhatsApp, and iMessage) and enterprise tools (e.g., Zoom, Slack, and VS
-Code), where developers use third party libraries for media rendering, and
-various functionality like spell checking and autocomplete.
+spell checking, even speech synthesis. Similar opportunities exist in many
+other application domains. For example, secure messaging apps (e.g., Signal,
+WhatsApp, and iMessage), servers and runtimes (e.g., Apache and Node.js,),
+and enterprise tools (e.g., Zoom, Slack, and VS Code) also rely on third
+party libraries for various tasks---from media rendering, to parsing network
+protocols like HTTP, to image processing (e.g., to blur faces), spell
+checking, and aumated text completion. Frameworks like RLBox can help these
+applications eliminate such libraries from their trusted computing base.
 
 In the rest of this article we will lay out the path to making library
 sandboxing a goto tool in more software engineering environments. We start
-with how RLbox works and how it leverages the C++ type systems to make
-sandboxing practical. Then we outline what we need to do to bring sandboxingg
-to other langauges. Finally, we end with a vision of what software
-development could look like if we have first-class support for sandboxing.
+with how RLBox works and how it leverages the C++ type systems to make
+sandboxing practical. Then we outline what we need to do to bring sandboxing
+to other languages, and how our lessons apply to other domains (e.g., trusted
+execution environments and OS kernels). Finally, we end with a vision of what
+software development could look like if we have first-class support for
+sandboxing.
 
-# RLbox framework
+# Sandboxing libraries with RLBox
 
-# Sandboxing for everyone: what we need and why.
+RLBox is a C++ framework for ...
+
+## Why do we need a framework?
+
+The applications-library boundary is tighly coupled and, as a result, it's
+easy to introduce security bugs when breaking this boundary to now consider
+the sandbox untrusted. + motivation for engineering effort
+
+### Address confused deputy attacks
+### Address sandboxing engineering effort 
+- noop sandbox for porting and downstream
+- incremental porting
+- ABI compat
+
+### Leveraging advances in hardware isolation
+
+- perf profiles for differnet things
+- experiment with new hardware features - mpk, cheri; make this fit:
+Trends in compiler toolchains and processors architectures make efficient
+in-process isolation increasingly practical without resorting to exotic
+techniques e.g. WebAssembly is becoming a defacto standard tool chain for
+software based fault isolation, multi-core and even minion processors support
+the use of multiple protection domains without prohibitive overheads, and
+emerging architecture features such as Intel MPK and ARM-Cheri allow
+in-process isolation with very low overhead.
+
+## Beyond sandboxing
+
+These problems are not exclusive to sandboxing.
+
+- SGX
+- Kernels
+- IPC layer in FF
+
+Moreover, RLBox's tainted types can used anywhere we handle untrusted content.
+- SQLi
+- XSS (TrustedTypes)
+
+# First-class support for tainted types and sandboxing
+
+Though we implemented RLBox in C++ to sandbox C libraries, we believe the
+underlying principles translate to other languages.
+
+## What existing langauge features can we reuse?
+
+metaprogramming for secuirity checks
+generics or code generation for wrapper tyo
+contracts/interface types
+
+## Why we want first-class support?
+
+- can include libraries sandboxed from the start
+- ffi-layer should do sandboxing from the start this
+
+# Conclusions
+
+
+----
+---- OLD STUFF
+----
+
+
+# Why now?
+
+Sandboxing third party libraries is not a novel idea. These concepts have
+been explored for years in academia, and has now crossed critical milestones
+that make them practical. Trends in compiler toolchains and processors
+architectures make efficient in-process isolation increasingly practical
+without resorting to exotic techniques e.g. WebAssembly is becoming a defacto
+standard tool chain for software based fault isolation, multi-core and even
+minion processors support the use of multiple protection domains without
+prohibitive overheads, and emerging architecture features such as Intel MPK
+and ARM-Cheri allow in-process isolation with very low overhead.
+
+Next, as our own work on Firefox in collabortation with colleuages at Mozilla
+has illustrated, the software engineering problems of sandboxing, including
+efficienty porting libraries into a sandboxed environment, and ensuring that
+interactions between the sandboxed library and trusted application can be
+secured without expert knowledge, are practical.
+
+Finally, languages like Rust offer the ability to greatly reduce or eliminate memory
+safety bugs in new code, however, this code may still use dependencies written in C,
+potentially negating the memory safety benefits of Rust.
+
+
+# Vision
+---------
+
+
+In this article we argue that this perspective needs to be updated, its time
+to make compartmentalization mainstream. Much as one would ask today, "why
+does this need to be running in the OS kernel", we hope in the future developers
+will ask, "why does this module or dependency need to run in the applications
+trusted computing base".
+
+
+-------
+# RLBox framework
+
+# Sandboxing for everyone: what we need and why
 
 
 
@@ -77,30 +180,6 @@ What we need to do this in other languages.
 How this could change the way we develop software.
     -designing with sandboxing at start (trusted core, less trusted periphery)
     -package ecosystems with sandboxing built in (wasm ecosystem example)
-
-
-
-
-
-
-
-
-\paragraph{Why now?}
-While this is not a novel idea, and similar concepts have been bandied about
-for years in reseearch we believe this is increasingly practical. Trends
-in compiler toolchains and processors architectures make efficient in-process
-isolation increasingly practical without resorting to exotic techniques e.g.
-WebAssembly is becoming a defacto standard tool chain for software based
-fault isolation, multi-core and even minion processors support the
-use of multiple protection domains without prohibitive overheads, and
-emerging architecture features such as Intel MPK and ARM-Cheri allow
-in-process isolation with very low overhead.
-
-Next, as our own work on Firefox in collabortation with colleuages at Mozilla
-has illustrated, the software engineering problems of sandboxing, including
-efficienty porting libraries into a sandboxed environment, and ensuring that
-interactions between the sandboxed library and trusted application can be
-secured without expert knowledge, are practical.
 
 
 \paragraph{Sandboxing in Firefox: Third Party code and Beyond}
