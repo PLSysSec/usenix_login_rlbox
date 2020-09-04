@@ -66,7 +66,7 @@ library.
 Our own experience sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive, and
 very prone to security bugs. In contrast, once we developed the RLBox framework
-[NDG+20] the incremental work to sandbox new libraries became minimal, and more
+[[**NDG+20**][NDG+20]] the incremental work to sandbox new libraries became minimal, and more
 opportunities to sandbox additional parts of the application became apparent.
 
 In the rest of this article we describe how RLBox works, how it leverages the
@@ -356,9 +356,17 @@ Case study of Rust:
 
 # Conclusions
 
+# References
+
+[**NDG+20**] S. Narayan, C. Disselkoen, T. Garfinkel, N. Froyd, E. Rahm, S. Lerner, H. Shacham, and D. Stefan. "[Retrofitting Fine Grain Isolation in the Firefox Renderer][NDG+20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
+[NDG+20]: https://www.usenix.org/conference/usenixsecurity20/presentation/narayan
+
+
+
 <style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
 <script src="markdeep.min.js"></script>
 <script>
   window.alreadyProcessedMarkdeep || (document.body.style.visibility="visible");
-  markdeepOptions= {tocStyle: 'short', sortScheduleLists: false };
+  markdeepOptions= {tocStyle: 'long', sortScheduleLists: false };
 </script>
+
