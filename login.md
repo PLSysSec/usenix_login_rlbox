@@ -122,7 +122,7 @@ RLBox offers two important escape hatches.
   tainted wrapper. This allows the application code to disable tainting of data
   when data must be passed to code that cannot handle tainted data. However, as
   the API name indicates, the use of this API would not enforce the required
-  security checks, and is to be used only in the context of migratiging code.
+  security checks, and is to be used only in the context of migrating code.
   After migration is complete, calls to UNSAFE_unverified APIs must be removed
   or replaced with validator functions that sanitize the given data.
 
@@ -147,7 +147,7 @@ in production code. We discuss these below
 First the incremental porting greatly simplifies the code review process. For
 instance, we could commit and get reviews for partial migrations to the RLBox
 API as this do not the Firefox browser continued to build and run as before.
-Additionally, in the initial migration we simply ommitted the validators for use
+Additionally, in the initial migration we simply omitted the validators for use
 of UNSAFE_unverified APIs. This allowed to test and deploy the partial migration
 on Firefox nightly builds. We then included the data validators in a separate
 code review with additional security reviews as part of this change.
@@ -178,9 +178,9 @@ RLBox, also allows leveraging more complicated hardware security mechanisms. For
 instance consider ARM Cheri, which is a hardware feature that converts pointers
 into capabilities that apply bounds checks. Since this feature expands the size
 of pointers it may not be easy to deploy for all applications especially if the
-increased pointer size introduces incompatiblities. Furthermore it would not be
+increased pointer size introduces incompatibilities. Furthermore it would not be
 easy to apply this to just a portion of the code as any data-structures from
-this portion of code would have ABI incompatibilties with the rest of the
+this portion of code would have ABI incompatibilities with the rest of the
 application. However, since the RLBox can automatically adjust for ABI
 differences, applications can straightforwardly use Cheri to secure a single
 component in an application.
@@ -236,11 +236,36 @@ bugs etc.
 # First-class support for tainted types and sandboxing
 
 Though we implemented RLBox in C++ to sandbox C libraries, we believe the
-underlying principles translate to other languages.
+underlying principles translate to other languages. Additionally we also make
+the case for first class support for RLBox in languages and their tooling.
 
-## What existing langauge features can we reuse?
+## RLBox's use of language features
 
-metaprogramming for secuirity checks
+RLBox is a C++ library built on the idea of using tainted types (implemented via
+generics) and leveraging compiler type checking to enforce security properties.
+When RLBox wishes to permitting safe operations on tainted types under certain
+constraints, this involves implementing the appropriate operator overloads on
+the tainted type while enforcing the constraints using C++ metaprogramming
+techniques.
+
+While at first glance this approach looks extremely tied to C++, the concepts
+behind RLBox are general and may be implemented in other languages as well. For
+instance, the core technique behind RLBox is the use of the wrapper types
+tainted and tainted_volatile. Most statically types languages offer some form of
+generics or templates that allow this. A notable exception here is C, which does
+not offer such as system. In such an environment, implementing an RLBox like
+library comes with two caveats. First, we would need to use extra code
+generation utilities that generate tainted types that use composition instead of
+generics i.e. we generate types for tainted_int, tainted_float, tainted_foo etc
+instead of providing one generic tainted<T> type. Next, 
+
+ even in such an environment RLBox can be
+implemented with two first caveats. First wrapper types such as tainted<int> can
+be replaced with simple types tainted_int that use composition to hold tainted
+data; however we need to generate all necessary instantiations of these types
+that are used such as tainted_float, tainted_these simple types must be generate
+
+metaprogramming for security checks
 generics or code generation for wrapper tyo
 contracts/interface types
 
