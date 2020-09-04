@@ -14,8 +14,8 @@ libraries.
 There is a practical alternative to today's trust-everything model: we can
 enforce least privilege by sandboxing libraries. Thus, minimizing the damage
 inflicted by buggy or malicous libraries.  While this may sound radical at
-first glance, it is often not a significant departure from how we use libraries
-today.
+first glance, in our experience it is often not a significant departure from
+how we use libraries today.
 
 As a result of basic principles of modularity and good interface design, most
 libraries do not require unfettered access to the processes entire address
@@ -51,8 +51,7 @@ WhatsApp, and iMessage), servers and runtimes (e.g., Apache and Node.js,),
 and enterprise tools (e.g., Zoom, Slack, and VS Code) also rely on third
 party libraries for various tasks---from media rendering, to parsing network
 protocols like HTTP, to image processing (e.g., to blur faces), spell
-checking, and automated text completion. Frameworks like RLBox can help these
-applications eliminate such libraries from their trusted computing base.
+checking, and automated text completion. 
 
 Recent advances in the compiler and processor architecture space have made
 efficient in-process isolation increasingly practical in a wide range of use
