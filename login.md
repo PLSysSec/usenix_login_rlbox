@@ -2,39 +2,46 @@
 
 # Introduction
 
-Modern software makes heavy use of third-party libraries. While this is key
-for developer productivity, this is also a security nightmare. Third party
-libraries, today, are completely trusted and, unfortunately, this means that
+Modern software makes heavy use of third-party libraries. While this is critical
+for developer productivity, it is also a security nightmare. Third party
+libraries, today, are completely trusted. Unfortunately, this means that
 bugs in any library can be easily exploited to compromise the entire
-application. Even more worrisome, attacks on software supply chains are
+application. Further, attacks on software supply chains are
 becoming more prevalent: attackers are compromising (and sometimes buying)
 the accounts of software maintainers to slip backdoored code into popular
 libraries.
 
 There is a practical alternative to today's trust-everything model: we can
-sandbox libraries and, in turn, minimize the damage due to library bugs and
-exploits. Many libraries do not require complete trust for applications to
-safely use their functionality. For example, image decoders like libjpeg and
-libpng don't need access to anything but the image buffers they operates on,
-OpenSSL doesn't need access to anything but the socket it's reading from and
-the bytestream it's writing the decrypted HTTP stream to, and spell checkers
-like Hunspell don't need access to anything but dictionary files and the
-string it's spell checking. (These are just a few examples, however, we
-believe many other examples abound.) This implicit separation of privilege
-makes libraries especially well suited for sandboxing.
+enforce least privilege by sandboxing libraries. Thus, minimizing the damage
+inflicted by buggy or malicous libraries.  While this may sound radical at
+first glance, it is often not a significant departure from how we use libraries
+today.
 
-Unfortunately, library sandboxing has suffered from a chicken and egg
-problem. Without practical tools for sandboxing libraries with minimal
-performance overhead and engineering effort, developers and security
-engineers are not looking for these opportunities.
+As a result of basic principles of modularity and good interface design, most
+libraries do not require unfettered access to the processes entire address
+space, and as a practical matter, also require only a limited set of OS
+privileges to accomplish their task. Thus, they often lend themselves to
+running in a de-privileged and memory isolated context.
 
+For example, image decoders like libjpeg and libpng don't need access to
+anything but the image buffers they operate on, OpenSSL doesn't need access to
+anything but the socket it's reading from and the bytestream it's writing the
+decrypted HTTP stream to, and spell checkers like Hunspell don't need access to
+anything but dictionary files and the string it's spell checking.
 
-Our own experience sandboxing libraries in Firefox reflects this. Our initial
-attempts to manually sandbox third party libraries were labor intensive,
-and extremely error prone. In contrast, once we developed a mature
-framework---RLBox---to support this activity, the incremental work to sandbox
-new libraries became minimal, and more opportunities to sandbox additional
-parts of the application became apparent.
+These are just a few examples, however, we believe other examples abound.
+Unfortunately, library sandboxing has suffered from a chicken and
+egg problem. Without practical tools for securely sandboxing libraries with minimal
+performance overhead and engineering effort, developers and security engineers
+are not looking for these opportunities.
+
+We believe it is time for a shift in this perspective.  Over the past two years
+we have worked with a team at Mozilla to migrate Firefox to a model where a
+variety of different third party libraries run sandboxed. This new approach has
+been shipping in Firefox since XXX. Our experience suggests that once their is
+sufficient tooling support that engineers can easily sandbox libraries, they
+become increasingly comfortable with and excited by the opportunities this
+offers.
 
 For example, while we began with third party font shaping libraries, now
 Firefox developers and security engineers are using RLBox for media decoding,
@@ -47,33 +54,89 @@ protocols like HTTP, to image processing (e.g., to blur faces), spell
 checking, and automated text completion. Frameworks like RLBox can help these
 applications eliminate such libraries from their trusted computing base.
 
-To make library sandboxing a goto tool in more software engineering
-environments. There are three critical challenges to be address. 
+Recent advances in the compiler and processor architecture space have made
+efficient in-process isolation increasingly practical in a wide range of use
+cases.  However, to make library sandboxing a goto tool in more software
+engineering environments, an essential missing element has been a common
+framework support to make it easy to sandbox libraries in a manner that is
+secure, i.e., by correctly enforcing a secure interface between the now
+untrusted library and the library consumer, efficient i.e., that minimizes
+changes to the library and consuming application, and efficient i.e., able to
+isolate library code and share data across the library boundry with minimal
+added overhead.
+
+Our own experience sandboxing libraries in Firefox reflects this. Our initial
+attempts to manually sandbox third party libraries were labor intensive,
+and very prone to security bugs. In contrast, once we developed a mature
+framework---RLBox---to support this activity, the incremental work to sandbox
+new libraries became minimal, and more opportunities to sandbox additional
+parts of the application became apparent.
+
+Next section, how RLBox works and how it leverages the C++ type systems to make
+sandboxing practical. Then we outline what we need to do to bring sandboxing
+to other languages. Finally, we end with a vision of what software development
+could look like with broader first-class support for sandboxing.
 
 
-_engineering effort_ we to minimize the upfront work required
-to change our application to use sandboxing, especially as this is multiplied
-across many libraries, minimizing changes to libraries is also important as this can
+
+# Library Sandboxing in Firefox
+
+
+Our perspective has been informed by our efforts over the past two years in
+collaboration with a team at Mozilla to sandbox third-party libraries in
+Firefox. In brief, third party media handling libraries for rendering images,
+video, and audio have been a significant source of vulnerabilities in the
+browser. 
+
+
+
+
+Making this practical poses three significant challenges across three
+dimensions.
+%
+First, {\it engineering effort}---we need to minimize the upfront work required
+to change the renderer to use sandboxing, especially as this is multiplied
+across dozens of libraries;
+%
+minimizing changes to libraries is also important as this can
 significantly increase the burden of tracking upstream changes.
-
-_security_ applications are not built
-to protect themselves from libraries; thus, we have to sanitize all data and regulate control
-flow between the library and application to prevent libraries from breaking out of
+%
+Second, {\it security}---the renderer was not built
+to protect itself from libraries; thus, we have to sanitize all data and regulate control
+flow between the library and renderer to prevent libraries from breaking out of
 the sandbox.
-
+%
 In our experience, bugs at the library-renderer boundary are not only easy to
 overlook, but can nullify any sandboxing effort---and other developers,
 not just us, must be able to securely sandbox new libraries.
-
-_efficiency_the renderer is performance critical, so adding
+%
+Finally, {\it efficiency}---the renderer is performance critical, so adding
 user-visible latency is not acceptable.
 
+To help us address these challenges, we develop a framework called \sys that
+makes data- and control-flow at the library-renderer interface explicit, using
+types. Unlike prior approaches to sandbox automation that rely on extensive
+custom analysis frameworks~(\S\ref{sec:related}), \sys is simply a
+library\footnote{
+Our only external tooling is a \textasciitilde{}100LOC Clang
+plugin, described in Section~\ref{subsec:impl_taint}, that makes up for C++'s
+currently limited  support for reflection on structs.
+}
+that leverages the C++ type system and is easy to incorporate into \ff's
+predominantly C++ codebase.
 
-We start
-with how RLBox works and how it leverages the C++ type systems to make
-sandboxing practical. Then we outline what we need to do to bring sandboxing
-to other languages. Finally, we end with a vision of what software development
-could look like if we have first-class support for sandboxing.
+Using type information, \sys can identify where security checks are needed,
+automatically insert dynamic checks when possible, and force compiler errors
+for any security checks that require additional user intervention.  Our
+type-driven approach enables a systematic way to migrate \ff's renderer to use
+sandboxed libraries and allows \sys to support secure and
+efficient sharing of data structures between the renderer and library (e.g., by
+making shared memory operations safe and by lazily copying data out of the sandbox).
+
+
+
+
+
 
 # Sandboxing libraries with RLBox
 
