@@ -78,7 +78,7 @@ could look like with broader first-class support for sandboxing.
 
 
 
-# Library Sandboxing in Firefox
+# Library Sandboxing in Firefox with RLBox
 
 
 Our perspective has been informed by our efforts over the past two years in
@@ -135,14 +135,13 @@ making shared memory operations safe and by lazily copying data out of the sandb
 
 
 
+# Why do we need a common sandboxing Framwork
 
-
-# Sandboxing libraries with RLBox
+XXX elaborate on security justifications and migration justifications
 
 RLBox is a C++ framework that helps developers migrate and maintain code in
 application to safely use sandboxed libraries.
 
-## Why do we need a framework?
 
 The applications-library boundary is tightly coupled and by default application
 code is written assuming libraries are trusted. To benefit from sandboxing
@@ -276,7 +275,7 @@ approach, which makes a copy of data before performing any validation.
 Readers may have spotted that the problems addressed by RLBox are in no
 way exclusive to the sandboxing space. We discuss this next.
 
-# First-class support for tainted types and sandboxing
+# Language support for Sandboxing with Tainted Types
 
 Though we implemented RLBox in C++ to sandbox C libraries, we believe the
 underlying principles translate to other languages. Going even further, we
@@ -322,7 +321,7 @@ types --- to automatically validate tainted data prior to use.
 to fully support structs. However, C++ metaclasses and reflection support will
 allow RLBox to support this automatically.-->
 
-## First-class support for RLBox
+# Making Sandboxing a First Class Part of the Developer Experience
 
 In the further future, we envision first-class support in languages and their
 tooling for RLBox, and for sandboxing more broadly. First-class support in a
