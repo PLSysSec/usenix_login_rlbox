@@ -280,43 +280,82 @@ way exclusive to the sandboxing space. We discuss this next.
 # First-class support for tainted types and sandboxing
 
 Though we implemented RLBox in C++ to sandbox C libraries, we believe the
-underlying principles translate to other languages. Additionally we also make
-the case for first class support for RLBox in languages and their tooling.
+underlying principles translate to other languages. Going even further, we
+propose first class support for RLBox in languages and their tooling, so that
+!!!!TODO!!!!
 
 ## RLBox's use of language features
 
-RLBox is a C++ library built on the idea of using tainted types (implemented via
-generics) and leveraging compiler type checking to enforce security properties.
-When RLBox wishes to permitting safe operations on tainted types under certain
-constraints, this involves implementing the appropriate operator overloads on
-the tainted type while enforcing the constraints using C++ metaprogramming
+To understand how to bring RLBox to other languages, we need to first
+understand which C++ features RLBox relies on. Primarily, RLBox uses tainted
+types (implemented via C++ generics) and leverages compiler type checking to
+enforce security properties. RLBox also permits safe operations on tainted
+types under certain constraints by taking advantage of operator overloading,
+and enforces constraints on these operations using C++ metaprogramming
 techniques.
 
-While at first glance this approach looks extremely tied to C++, the concepts
-behind RLBox are general and may be implemented in other languages as well. For
-instance, the core technique behind RLBox is the use of the wrapper types
-tainted and tainted_volatile. Most statically types languages offer some form of
-generics or templates that allow this. A notable exception here is C, which does
-not offer such as system. In such an environment, implementing an RLBox like
-library comes with two caveats. First, we would need to use extra code
-generation utilities that generate tainted types that use composition instead of
-generics i.e. we generate types for tainted_int, tainted_float, tainted_foo etc
-instead of providing one generic tainted<T> type. Next, 
+Many other languages include features which can be used to implement the same
+general RLBox principles. For instance, many statically-typed languages offer
+some form of generics or templates which could be used to implement RLBox's
+tainted and tainted_volatile types. A notable exception here is
+C---supporting RLBox in C would require some tool for code generation.
+Similarly, many languages allow operator overloading, which RLBox uses to
+provide safe operations on tainted types while preserving the original
+syntax of the language. (For instance, in C++, RLBox allows dereferencing
+a tainted<int*> via the natural '->' and '*' operators, but with automatically
+inserted bounds checks.)
 
- even in such an environment RLBox can be
-implemented with two first caveats. First wrapper types such as tainted<int> can
-be replaced with simple types tainted_int that use composition to hold tainted
-data; however we need to generate all necessary instantiations of these types
-that are used such as tainted_float, tainted_these simple types must be generate
+Frameworks like RLBox can also be used to enforce security in dynamically
+typed languages like JavaScript. However, without compiler assistance, RLBox
+cannot provide helpful compile-time assistance, which is especially important
+during incremental porting. Instead, the errors would manifest as runtime
+errors. Thus, while the usability of RLBox would be reduced, the security
+guarantees would be the same.
 
-metaprogramming for security checks
-generics or code generation for wrapper tyo
-contracts/interface types
+This is just the beginning! We envision a future where RLBox could leverage
+many additional language features as well. For instance, RLBox could take
+advantage of Rust's affine types to automatically prevent
+time-of-check-time-of-use attacks and double fetch attacks. RLBox could also
+leverage contracts --- as recently proposed for C++, or for Wasm's interface
+types --- to automatically validate tainted data prior to use.
 
-## Why we want first-class support?
+<!-- RLBox currently requires extra user specification (in the form of macros)
+to fully support structs. However, C++ metaclasses and reflection support will
+allow RLBox to support this automatically.-->
 
-- can include libraries sandboxed from the start
-- ffi-layer should do sandboxing from the start this
+## First-class support for RLBox
+
+In the further future, we envision first-class support in languages and their
+tooling for RLBox, and for sandboxing more broadly. First-class support in a
+language module system or in a package manager could allow users to
+seamlessly choose to sandbox libraries when importing dependencies, and could
+also automatically apply tainted types to all of the values coming out of the
+library. First-class support could also ensure that the syntax for using
+RLBox is as natural as possible -- for instance, invoking sandbox functions
+could share the same syntax as ordinary function calls. Language tooling
+could automatically adjust its build system to appropriately switch to a
+sandboxing compiler for libraries which the user wants to sandbox. The
+language could potentially even automatically pull in contract definitions
+for each library's interface, using a system similar to what we see today for
+TypeScript. In short, first-class support for RLBox could make sandboxing
+even more seamless for users, resulting in greater security in the greater
+software ecosystem.
+
+Most languages support FFI to libraries written in other languages, particularly
+C. Integrating RLBox into the natural FFI support for a language would help
+automatically ensure that C-language libraries do not violate the invariants
+expected by higher-level constructs in the source language. It would also
+provide greater security in general, as memory safety bugs in the C-language
+library would be prevented from compromising the larger application; an effort
+explored by multiple academic papers -- !!!tocite{robusta, sandcrust, some node
+thing?, lookup language sandboxes}!!!!.
+
+Case study of Rust:
+- has generics
+- has a powerful macro system for code generation
+- typeclasses allow some operator definitions
+- affine types
+- has support for direct wasm compilation in the build system
+- well defined dependency management toolchain
 
 # Conclusions
-
