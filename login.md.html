@@ -203,13 +203,45 @@ This simple design for RLBox allows us to provide several features including
   accounting for ABI differences, data marshalling etc. automatically
 - Easily enabling or disabling different isolation technologies.
 
-### Eliminating confused deputy attacks
+## Eliminating confused deputy attacks
 
 !!!!TODO!!!!
 
-### Minimizing sandboxing engineering effort
+## Minimizing sandboxing engineering effort
 
-RLBox is also explicitly designed to minimize engineering effort. For instance,
+While we have focussed on the security features of RLBox so far, RLBox has
+several features designed to greatly reduce engineering effort -- in practice,
+this is extremely important as without these features, migrating application
+code can quickly become tedious and error-prone. Below we present some of the
+challenges that prompted us S
+
+For instance, SFI toolchains such as NaCl or Wasm have a different ABI than
+application code. Wasm and NaCl use a 32-bit machine model (LP32) i.e. the size
+of "long" and a "void*" in C code is 32-bits. Thus sharing data-structures
+between application code and libraries is not straightforward. Additionally it
+is not just differences in sizes, pointers in these toolchains have an
+altogether different format---pointers are stores as relative offsets from the
+base of the sandbox heap for performance. Thus any datastructure that are
+exchanged between the application and library must account for size differences
+as well as convert or "swizzle" the pointer representations appropriately.
+
+The other challenge in using the sandboxed libraries is performing the code
+changes required to migrate to using sandboxed libraries. Application may be
+very tightly coupled with the library that is to be sandboxed. For instance,
+when sandboxing the use of libjpeg in Firefox, we found that there are 25
+different API calls, 5 callbacks and many shared data structures between Firefox
+and libjpeg. We cannot reasonably expect application developers to migrate all
+interactions with sandboxed library to the RLBox API in a single step.
+
+RLBox addresses both of these challenges through a combination of automation and
+compiler driven feedback. We discuss how RLBox addresses both of these
+challenges in more detail below.
+
+### Automatically bridging ABI incompatibilities
+
+
+
+For instance,
 when using the RLBox API automatically...
 
 
@@ -220,6 +252,8 @@ data must be validated is done automatically. !!!!
 
 !!!!! Talk about how we later added ABI compat here - powered by the combination
 of tainted and tainted_volatile!!!!!!
+
+### Incremental migration
 
 RLBox allows us to migrate application code to use the RLBox API one line at a
 time. Between each change, the application can be compiled and run as before.
@@ -273,12 +307,12 @@ acceptable option. Instead, the RLBox API provides a simple option; Tor
 developers could migrate code to use the RLBox API but contribute upstream using
 the noop sandbox. They could then switch the configuration in the Tor browser to
 use an isolation mechanism that provides enforcement. Since using the noop
-sandbox little to no overherad (< 1%), this is a reasonable option.
+sandbox little to no overhead (< 1%), this is a reasonable option.
 
 Indeed this flexibility in switching between memory isolation also allows easy
 experimentation with many new hardware features. We discuss this next.
 
-### Leveraging advances in SFI and hardware isolation
+## Leveraging advances in SFI and hardware isolation
 
 As discussed RLBox's design allows it to be agnostic to the memory isolation
 technique. For example, consider Intel's Memory Protection Key features (MPK)
