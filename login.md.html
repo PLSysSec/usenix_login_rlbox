@@ -14,15 +14,15 @@ software maintainers to slip backdoored code into popular libraries.
 
 There is a practical alternative to today's trust-everything model: we can
 enforce least privilege by sandboxing libraries. Thus, minimizing the damage
-inflicted by buggy or malicous libraries.  While this may sound radical at
+inflicted by buggy or malicious libraries.  While this may sound radical at
 first glance, in our experience it is often not a significant departure from
 how we use libraries today.
 
 As a result of basic principles of modularity and good interface design, most
 libraries do not require unfettered access to the processes entire address
-space. The also require only a limited set of OS privileges to accomplish their
-task. This makelibrary especially well suited to running in a de-privileged and
-memory isolated context.
+space. They also require only a limited set of OS privileges to accomplish their
+task. Together these properties make libraries especially well suited to
+running in de-privileged and memory isolated contexts.
 
 For example, image decoders like libjpeg and libpng don't need access to
 anything but the image buffers they operate on, OpenSSL doesn't need access to
@@ -79,7 +79,6 @@ broader first-class support for sandboxing.
 
 # Library sandboxing in Firefox with RLBox
 
-
 Firefox, like other browsers, relies on dozens of third-party libraries to
 decode audio, images, fonts, and other content. Since these libraries have been
 a significant source of vulnerabilities in the browser (e.g., most of the
@@ -96,18 +95,19 @@ the easy part and, since then, WebAssembly toolkits---in particular, the Lucet
 WebAssembly compiler---has made this even easier (see
 [[**NGLSS19**][NGLSS19]]).
 
-The hard part was retrofitting Firefox to account for now-untrusted libraries.
-Firefox was written assuming libraries are trusted.  To benefit from
-sandboxing, we had to change our threat model to assume libraries are
-untrusted, and modify the browser-library interface accordingly.  In
-particular, we had to sanitize all data and regulate control flow between
+The hard part was the _last mile_, retrofitting Firefox to account for the
+now-untrusted libraries.  Firefox was written assuming libraries are trusted.
+To benefit from sandboxing, we had to change our threat model to assume
+libraries are untrusted, and modify the browser-library interface accordingly.
+In particular, we had to sanitize all data and regulate control flow between
 sandboxed libraries and the browser to prevent libraries from breaking out of
-their sandbox. Doing this manually was prone to error.
+their sandbox. Doing this manually was prone to error and onerous.
 
-To illustrate the kinds of traps and pitfalls we encountered, consider, for
-instance, the `fill_input_buffer` JPEG decoder function in Firefox.  This
-function is called by the libjpeg library whenever it needs more bytes from
-Firefox.
+**Traps and pitfalls**
+To illustrate the kinds of security challenges  we encountered, consider, for
+instance, refactoring the `fill_input_buffer` JPEG decoder function in Firefox.
+This function is called by the libjpeg library whenever it needs more bytes
+from Firefox.
 
 ```cpp
  1: void fill_input_buffer (j_decompress_ptr jd) {
@@ -131,8 +131,8 @@ Firefox.
 19: }
 ````
 
-When sandboxing libjpeg, we need to refactor this code. Among other things, we
-must:
+When sandboxing libjpeg, we need to refactor this code to account for the
+now-untrusted library boundary. Among other things, we must:
 
 - Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
   arbitrary-read gadget.
@@ -150,24 +150,27 @@ must:
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that result in a use-after-free vulnerability.
 
-Though these are only a subset of the ncecessary checks we identified and
-describe in [[**NDG+20**][NDG+20]], this alone, we think, is enought to show
-that adding such checks to the hundreds of Firefox functions that interact with
-libjpeg is brittle and error prone. Indeed, while migrating Firefox to this
-model we made many mistakes---overlooking attack vectors and discovering many
-bugs only after building RLBox to help detect them.
+Missing any of these checks---and these are only a subset of the kinds of
+checks we identified in [[**NDG+20**][NDG+20]]---allows a compromised library
+to carry out _confused deputy_ attacks, i.e., abuse the application code and
+its privilege to essentially break out of the sandbox.  Unfortunately, getting
+all the right checks in all the right places for the hundreds of Firefox
+functions that interact with libjpeg is hard. Indeed, while migrating Firefox
+to this model we made many mistakes---overlooking attack vectors and
+discovering many bugs only after building RLBox to help detect them.
 
-Even if we can somehow get all checks right, the upfront engineering effort of
-retrofitting the browser to sandbox any library as such is huge: We have to
+**Engineering effort**
+Even if we could somehow get all checks right, the upfront engineering effort
+of retrofitting the browser to sandbox any library as such is huge: We have to
 retrofit all library calls, adjust data structures to account for machine model
-differences, copy values to and from the sandbox, etc.  _in one step_. Only
-then can we run tests to ensure our retrofitting didn't break the browser.
-Since Firefox runs on many platforms---including platforms not supported by our
-SFI toolkit---we have to do this alongside the existing code that used the
-library unsandboxed, using the C preprocessort to select between the old code
-and the new code. We tried this---but the patches become so complicated and
-unwieldy we had to scrap the effort and build a framework to help us address
-these challenges.
+differences, copy values to and from the sandbox, etc. Only then can we run
+tests to ensure our retrofitting didn't break the browser.  Since Firefox runs
+on many platforms---including platforms not supported by SFI toolkits like NaCl
+and Wasm---we have to do this alongside the existing code that used the library
+unsandboxed, using the C preprocessor to select between the old code and the
+new code. We tried this, but the patches become so complicated and unwieldy, we
+couldn't image anybody maintaining this code. We then built RLBox and started
+anew.
 
 <!--
 -----
