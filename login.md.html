@@ -287,19 +287,45 @@ challenges in more detail below.
 
 ### Automatically bridging ABI incompatibilities
 
+RLBox automatically bridges ABI differences by leveraging the type system. In
+particular, RLBox uses two types---tainted<T> and tainted_volatile<T> to
+automate ABI conversions. The tainted type represents any numeric data
+influenced by the sandbox as well as pointers held by the application that refer
+to memory inside the sandbox, while the tainted_volatile<T> type is used for any
+data stored in sandbox memory i.e. can be modified by sandbox code.
 
+This simple division allows RLBox to automatically apply ABI conversions, adjust
+field offsets in structs, correct pointer arithmetic, swizzle pointers as
+needed, and even automatically bounds check pointers appropriately as they are
+dereferenced. The easiest way to demonstrate the importance of this automation.
 
-For instance,
-when using the RLBox API automatically...
+```
+decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
+```
 
+If we were to port this line with RLBox's automatic ABI conversions and security
+checks, the resulting code would look as follows.
 
-!!!!! Swizzling operations, per-
-forming checks that ensure sandbox-supplied pointers point
-to sandbox memory, and identifying locations where tainted
-data must be validated is done automatically. !!!!
+```
+auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err" /* field */);
+assert(in_sandbox_memory(err_field)); // Bounds check.
+auto err_field_swizzled = adjust_for_abi_convert_pointer(err_field);
+auto msg_field = adjust_for_abi_get_err_field(err_field_swizzled, "msg_code");
+assert(in_sandbox_memory(msg_field)); // Bounds check
+auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
+// assign the value
+*msg_field_swizzled = adjust_for_abi(JERR_OUT_OF_MEMORY);
+```
 
-!!!!! Talk about how we later added ABI compat here - powered by the combination
-of tainted and tainted_volatile!!!!!!
+In contrast, RLBox lets you write the above exactly as it originally was
+written i.e.
+
+```
+decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
+```
+
+We note that tainted_volatile<T>  is an internal detail of RLBox
+and is never exposed to users of RLBox.
 
 ### Incremental migration
 
