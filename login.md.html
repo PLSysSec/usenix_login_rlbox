@@ -346,13 +346,21 @@ library would be prevented from compromising the larger application; an effort
 explored by multiple academic papers -- !!!tocite{robusta, sandcrust, some node
 thing?, lookup language sandboxes}!!!!.
 
-Case study of Rust:
-- has generics
-- has a powerful macro system for code generation
-- typeclasses allow some operator definitions
-- affine types
-- has support for direct wasm compilation in the build system
-- well defined dependency management toolchain
+Rust in particular offers an exciting target for RLBox. Rust satisfies the
+minimum requirements for RLBox's types in that it offers generics and allow
+specifying operator behavior via typeclasses. Additionally, Rust's rich macro
+system and affine types allows it to provide even more features than the C++
+library; namely automatic struct support and time-of-check-time-of-use
+prevention. Most importantly Rust has an easy to use and powerful build and
+package management configured via a Cargo.toml file. Providing an extra flag
+here to indicate when a dependency should be sandboxed would be straightforward.
+The Rust build system could then compile this dependency to WebAssembly
+(something that is already supported), and automatically wrap the data returned
+by functions in these dependencies with tainted types. By doing this, Rust can
+offer a single configuration that allows users to sandbox dependencies. Of
+course developers are still responsible for modifying their code to add
+validators where needed, however this would encourage developers to consider
+sandboxing as an important tool for dependencies.
 
 # Conclusions
 
