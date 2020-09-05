@@ -265,14 +265,6 @@ application. However, since the RLBox can automatically adjust for ABI
 differences, applications can straightforwardly use Cheri to secure a single
 component in an application.
 
-Finally, consider Intel TSX which provides hardware support for transactional
-memory. RLBox can leverage this feature to prevent time-of-check-time-of-use and
-double-fetch attacks. This would potentially allow some speedup over the current
-approach, which makes a copy of data before performing any validation.
-
-Readers may have spotted that the problems addressed by RLBox are in no
-way exclusive to the sandboxing space. We discuss this next.
-
 # Language support for Sandboxing with Tainted Types
 
 Though we implemented RLBox in C++ to sandbox C libraries, we believe the
