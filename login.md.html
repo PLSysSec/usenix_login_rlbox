@@ -66,8 +66,9 @@ library.
 Our own experience sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive, and
 very prone to security bugs. In contrast, once we developed the RLBox framework
-[[**NDG+20**][NDG+20]] the incremental work to sandbox new libraries became minimal, and more
-opportunities to sandbox additional parts of the application became apparent.
+[[**NDG+20**][NDG+20]] the incremental work to sandbox new libraries became
+minimal, and more opportunities to sandbox additional parts of the application
+became apparent.
 
 In the rest of this article we describe how RLBox works, how it leverages the
 C++ type systems to make sandboxing practical, and how this type-driven
@@ -79,18 +80,48 @@ broader first-class support for sandboxing.
 # Library sandboxing in Firefox with RLBox
 
 
-Our perspective has been informed by our efforts over the past two years in
-collaboration with a team at Mozilla to sandbox third-party libraries in
-Firefox. In brief, third party media handling libraries for rendering images,
-video, and audio have been a significant source of vulnerabilities in the
-browser. 
+Firefox, like other browsers, relies on dozens of third-party libraries to
+decode audio, images, fonts, and other content. Since these libraries have been
+a significant source of vulnerabilities in the browser (e.g., most of the
+browser bugs found by Sys this year were in third-party libraries
+[[**BSE20**][BSE20]]), by retrofitting Firefox to sandbox libraries we can
+minimize the damage due to library bugs (e.g., like the libvorbis bug at
+Pwn2Own 2018 to compromise Firefox).
+
+We started this project roughly two years thinking the hardest part of
+sandboxing libraries is adopting a software-based isolation (SFI)
+toolkit---Google's NativeClient (NaCl) at the time---for library sandboxing .
+(NaCl is designed for sandboxing programs, not libraries.) This turned out be
+the easy part and, since then, WebAssembly toolkits---in particular, the Lucet
+WebAssembly compiler---has made this even easier (see
+[[**NGLSS19**][NGLSS19]]).
+
+The hard part was retrofitting Firefox to account for now-untrusted libraries.
+Firefox was written assuming libraries are trusted.  To benefit from
+sandboxing, we had to change our threat model to assume libraries are
+untrusted, and modify the browser-library interface accordingly.  In
+particular, we had to sanitize all data and regulate control flow between
+sandboxed libraries and the browser to prevent libraries from breaking out of
+their sandbox.
+
+!!! we could put example of how things fail here
+
+While migrating Firefox to this model we made numerous mistakes---overlooking
+attack vectors and discovering many bugs only after building RLBox to help
+detect them.  Moreover, the upfront engineering effort of retrofitting the
+browser to sandbox any library was huge: We had port calls to library, adjust
+data structures to account for ABI differences (NaCl's machine model is
+different from the application), copy values to and from the sandbox, etc.  _in
+one step_. Only then could we run tests to ensure our retrofitting didn't break
+the browser. Since Firefox runs on many platforms---including platforms not
+supported by our SFI toolkit---we had to do this alongside the existing code
+that used the library unsandboxed, using a guard `#if SANDBOXED` to select
+between the old code and the new code. The patches become so complicated and
+unwieldy, we scrapped the effort and built RLBox to address these challenges.
+
+-----
 
 
-
-
-Making this practical poses three significant challenges across three
-dimensions.
-%
 First, {\it engineering effort}---we need to minimize the upfront work required
 to change the renderer to use sandboxing, especially as this is multiplied
 across dozens of libraries;
@@ -361,6 +392,12 @@ sandboxing as an important tool for dependencies.
 
 [**NDG+20**] S. Narayan, C. Disselkoen, T. Garfinkel, N. Froyd, E. Rahm, S. Lerner, H. Shacham, and D. Stefan. "[Retrofitting Fine Grain Isolation in the Firefox Renderer][NDG+20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
 [NDG+20]: https://www.usenix.org/conference/usenixsecurity20/presentation/narayan
+
+[**BSE20**] F. Brown, D. Stefan, and D. Engler. "[Sys: a Static/Symbolic Tool for Finding Good Bugs in Good (Browser) Code][BSE20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
+[BSE20]: https://www.usenix.org/conference/usenixsecurity20/presentation/brown
+
+[**NGLSS19**] S. Narayan, T. Garfinkel, S. Lerner, H. Shacham, and D. Stefan.  "[Gobi: WebAssembly as a Practical Path to Library Sandboxing][NGLSS19]".  arXiv:1912.02285, Dec. 2019.
+[NGLSS19]: https://arxiv.org/abs/1912.02285
 
 
 
