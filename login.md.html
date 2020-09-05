@@ -102,70 +102,74 @@ sandboxing, we had to change our threat model to assume libraries are
 untrusted, and modify the browser-library interface accordingly.  In
 particular, we had to sanitize all data and regulate control flow between
 sandboxed libraries and the browser to prevent libraries from breaking out of
-their sandbox.
+their sandbox. Doing this manually was prone to error.
 
-For instance consider a single function in Firefox's JPEG decoder called
-`fill_input_buffer`. This is Firefox code for the fill_input buffer callback: a
-function invoked by libjpeg when requesting more bytes from the input stream.
-Below the Firefox code tries to expand the input data buffer. If it is unable to
-do so, it writes and error code to the `mInfo` structure--- a datastructure
-controlled by JPEG.
+To illustrate the kinds of traps and pitfalls we encountered, consider, for
+instance, the `fill_input_buffer` JPEG decoder function in Firefox.  This
+function is called by the libjpeg library whenever it needs more bytes from
+Firefox.
 
-```c++
-void fill_input_buffer (j_decompress_ptr jd) {
-  ...
-  JOCTET * buf = (JOCTET *) realloc(...);
-  if (!buf) {
-    decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
-    ...
-  }
-}
-```
+```cpp
+ 1: void fill_input_buffer (j_decompress_ptr jd) {
+ 2:   struct jpeg_source_mgr* src = jd->src;
+ 3:   nsJPEGDecoder* decoder = jd->client_data;
+ 4:   ...
+ 5:   src->next_input_byte = new_buffer;
+ 6:   ...
+ 7:   if (/* buffer is too small */) {
+ 8:     JOCTET* buf = (JOCTET*) realloc(...);
+ 9:     if (!buf) {
+10:       decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
+11:       ...
+12:     }
+13:     ...
+14:   }
+15:   ...
+16:   memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
+17:       src->next_input_byte, src->bytes_in_buffer);
+18:   ...
+19: }
+````
 
-This code snippet has multiple points of failure in the form of easy to miss
-security checks.
+When sandboxing libjpeg, we need to refactor this code. Among other things, we
+must:
 
-- Failing to bounds check `err` prior to dereferencing it can result in a write
-  gadget.
-- Failing to swizzle the nested pointer mInfo.err prior to dereferencing, can
-  result in a write gadget or crash.
-- Failing to prevent multiple threads from invoking the above callback on the
-  same image can induce a data race and use-after-free vulnerability in turn.
+- Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
+  arbitrary-read gadget.
+- Sanitize `src`, otherwise the write to `src->next_input_byte` on line 5
+  becomes an arbitrary-write gadget and the `memmove()` on line 16 becomes an
+  arbitrary read.
+- Sanitize `decoder` to ensure it points to a valid Firefox `nsJPEGDecoder`
+  object, otherwise invoking a virtual method on it will hijack control flow.
+- Sanitize the nested pointer `mInfo.err` on line 10 prior to dereferencing.
+- Sanitize the pointer `decoder->mBackBuffer + decoder->mBackBufferLen` used on
+  the destination address to `memmove()` on line 16.
+- Swizzle pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate the
+  pointers to account for the potentially different machine model of the
+  sandbox. Both NaCl and WebAssembly have different pointer representations.
+- Ensure that multiple threads can't invoke the callback on the same image,
+  otherwise we have data race that result in a use-after-free vulnerability.
 
-<!-- Actually I am thinking the above simple example may be enough -->
-<!-- Including one more, but we can remove this if needed -->
+These are only a subset of the ncecessary checks we identified and describe in
+[[**NDG+20**][NDG+20]]. But this alone, we think is enought to illustrate that
+adding such checks to the hundreds of Firefox functions that interact with
+libjpeg is extremely brittle and error prone. Indeed, while migrating Firefox
+to this model we made many mistakes---overlooking attack vectors and
+discovering many bugs only after building RLBox to help detect them.
 
-Consider another example the same `fill_input_buffer` function.
-
-```c++
-void fill_input_buffer (j_decompress_ptr jd) {
-  struct jpeg_source_mgr * src = jd->src;
-  ...
-  memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
-    src->next_input_byte, src->bytes_in_buffer);
-}
-```
-
-Since this callback is invoked by libjpeg, the callback parameters must be
-sanitized prior to use. Failure to do so allows control of some of the arguments
-of the memmove function giving libjpeg a write gadget.
-
-These are simply two examples from a single function in the JPEG decoder. When
-the effort to add required security checks to the hundreds of functions that
-interact with libjpeg, it is extremely easy to make mistakes. Indeed, while
-migrating Firefox to this model we made numerous mistakes---overlooking attack
-vectors and discovering many bugs only after building RLBox to help detect them.
-Moreover, the upfront engineering effort of retrofitting the browser to sandbox
-any library was huge: We had port calls to library, adjust data structures to
-account for ABI differences (NaCl's machine model is different from the
-application), copy values to and from the sandbox, etc.  _in one step_. Only
-then could we run tests to ensure our retrofitting didn't break the browser.
+Even if we can somehow get all checks right, the upfront engineering effort of
+retrofitting the browser to sandbox any library as such is huge: We have to
+retrofit all library calls, adjust data structures to account for machine model
+differences, copy values to and from the sandbox, etc.  _in one step_. Only
+then can we run tests to ensure our retrofitting didn't break the browser.
 Since Firefox runs on many platforms---including platforms not supported by our
-SFI toolkit---we had to do this alongside the existing code that used the
-library unsandboxed, using a guard `#if SANDBOXED` to select between the old
-code and the new code. The patches become so complicated and unwieldy, we
-scrapped the effort and built RLBox to address these challenges.
+SFI toolkit---we have to do this alongside the existing code that used the
+library unsandboxed, using the C preprocessort to select between the old code
+and the new code. We tried this---but the patches become so complicated and
+unwieldy we had to scrap the effort and build a framework to help us address
+these challenges.
 
+<!--
 -----
 
 
@@ -209,6 +213,7 @@ efficient sharing of data structures between the renderer and library (e.g., by
 making shared memory operations safe and by lazily copying data out of the sandbox).
 
 
+-->
 
 
 # Why do we need a common sandboxing Framwork
