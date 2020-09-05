@@ -150,12 +150,12 @@ must:
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that result in a use-after-free vulnerability.
 
-These are only a subset of the ncecessary checks we identified and describe in
-[[**NDG+20**][NDG+20]]. But this alone, we think is enought to illustrate that
-adding such checks to the hundreds of Firefox functions that interact with
-libjpeg is extremely brittle and error prone. Indeed, while migrating Firefox
-to this model we made many mistakes---overlooking attack vectors and
-discovering many bugs only after building RLBox to help detect them.
+Though these are only a subset of the ncecessary checks we identified and
+describe in [[**NDG+20**][NDG+20]], this alone, we think, is enought to show
+that adding such checks to the hundreds of Firefox functions that interact with
+libjpeg is brittle and error prone. Indeed, while migrating Firefox to this
+model we made many mistakes---overlooking attack vectors and discovering many
+bugs only after building RLBox to help detect them.
 
 Even if we can somehow get all checks right, the upfront engineering effort of
 retrofitting the browser to sandbox any library as such is huge: We have to
