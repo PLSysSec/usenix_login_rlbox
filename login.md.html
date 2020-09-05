@@ -308,9 +308,8 @@ checks, the resulting code would look as follows.
 
 ```
 auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err" /* field */);
-assert(in_sandbox_memory(err_field)); // Bounds check.
 auto err_field_swizzled = adjust_for_abi_convert_pointer(err_field);
-auto msg_field = adjust_for_abi_get_err_field(err_field_swizzled, "msg_code");
+auto msg_field = adjust_for_abi_get_err_field(*err_field_swizzled, "msg_code");
 assert(in_sandbox_memory(msg_field)); // Bounds check
 auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
 // assign the value
