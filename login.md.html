@@ -63,12 +63,16 @@ secure interface between the untrusted library and the application, and (2)
 _effectively_, to minimize the engineering effort required to sandbox a
 library.
 
+!!! TODO --- we can consider adding the text --- and (3) _flexibly_, to easily switch between different sandboxing mechanisms according the performance security considerations of the domain.
+
 Our own experience sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive, and
 very prone to security bugs. In contrast, once we developed the RLBox framework
 [[**NDG+20**][NDG+20]] the incremental work to sandbox new libraries became
 minimal, and more opportunities to sandbox additional parts of the application
 became apparent.
+
+!!! TODO --- ideally would like some text to _emphasize_ "all apps" not just firefox.
 
 In the rest of this article we describe how RLBox works, how it leverages the
 C++ type systems to make sandboxing practical, and how this type-driven
@@ -144,8 +148,8 @@ now-untrusted library boundary. Among other things, we must:
 - Sanitize the nested pointer `mInfo.err` on line 10 prior to dereferencing.
 - Sanitize the pointer `decoder->mBackBuffer + decoder->mBackBufferLen` used on
   the destination address to `memmove()` on line 16.
-- Swizzle pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate the
-  pointers to account for the potentially different machine model of the
+- "Swizzle" pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate
+  the pointers to account for the potentially different machine model of the
   sandbox. Both NaCl and WebAssembly have different pointer representations.
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that result in a use-after-free vulnerability.
@@ -163,102 +167,51 @@ discovering many bugs only after building RLBox to help detect them.
 Even if we could somehow get all checks right, the upfront engineering effort
 of retrofitting the browser to sandbox any library as such is huge: We have to
 retrofit all library calls, adjust data structures to account for machine model
-differences, copy values to and from the sandbox, etc. Only then can we run
+differences between the application and sandbox (a common issue with SFI
+toolchains), marshal data to and from the sandbox, etc. Only then can we run
 tests to ensure our retrofitting didn't break the browser.  Since Firefox runs
-on many platforms---including platforms not supported by SFI toolkits like NaCl
+on many platforms---including platforms not yet supported by SFI toolkits like NaCl
 and Wasm---we have to do this alongside the existing code that used the library
-unsandboxed, using the C preprocessor to select between the old code and the
-new code. We tried this, but the patches become so complicated and unwieldy, we
+unsandboxed, using the C preprocessor to select between the old code and the new
+code. We tried this, but the patches become so complicated and unwieldy, we
 couldn't image anybody maintaining this code. We then built RLBox and started
 anew.
 
-<!--
------
+# Why we need a common sandboxing Framework
 
+RLBox is a pure C++ library that helps developers migrate, maintain code in
+application to securely use sandboxed libraries. RLBox does this by providing
+APIs to invoke sandboxed functions, permit callbacks into the host application
+and more generally exchange data between the sandbox and application. These APIs
+are built around tainted types---these are wrapper types used to mark data
+received from the sandboxed library and impose a simple static information flow
+control (IFC) discipline.
 
-First, {\it engineering effort}---we need to minimize the upfront work required
-to change the renderer to use sandboxing, especially as this is multiplied
-across dozens of libraries;
-%
-minimizing changes to libraries is also important as this can
-significantly increase the burden of tracking upstream changes.
-%
-Second, {\it security}---the renderer was not built
-to protect itself from libraries; thus, we have to sanitize all data and regulate control
-flow between the library and renderer to prevent libraries from breaking out of
-the sandbox.
-%
-In our experience, bugs at the library-renderer boundary are not only easy to
-overlook, but can nullify any sandboxing effort---and other developers,
-not just us, must be able to securely sandbox new libraries.
-%
-Finally, {\it efficiency}---the renderer is performance critical, so adding
-user-visible latency is not acceptable.
+Importantly, RLBox was designed to precisely address the challenges presented in
+the previous section, namely, minimizing the effort to securely and efficiently
+sandbox libraries. The core of the challenge here is that the
+applications-library boundary is tightly coupled and by default application code
+is written assuming libraries are trusted. To benefit from sandboxing requires
+changing our threat model to assume libraries are untrusted, and modify the
+renderer-library interface accordingly (e.g, to sanitize untrusted inputs). In
+the RLBox model, interactions with the sandboxed library must go through the
+RLBox API. This allows RLBox to offer several useful features:
 
-To help us address these challenges, we develop a framework called \sys that
-makes data- and control-flow at the library-renderer interface explicit, using
-types. Unlike prior approaches to sandbox automation that rely on extensive
-custom analysis frameworks~(\S\ref{sec:related}), \sys is simply a
-library\footnote{
-Our only external tooling is a \textasciitilde{}100LOC Clang
-plugin, described in Section~\ref{subsec:impl_taint}, that makes up for C++'s
-currently limited  support for reflection on structs.
-}
-that leverages the C++ type system and is easy to incorporate into \ff's
-predominantly C++ codebase.
+- Automate security checks: Pointer swizzle operations, bounds checks that
+  ensure sandbox-supplied pointers point to sandbox memory, and identifying
+  locations where tainted data from the sandbox must be validated before use is
+  done automatically.
+- Reduce engineering effort: The RLBox framework reduces effort by automatically
+  handling all ABI differences in shared datastructures. Furthermore, RLBox
+  allows developers to incrementally port application code one line at a time,
+  such that the application compiles and runs with full functionality
+  (passing all tests) between each step of porting.
+- Evaluating performance tradeoffs: The RLBox framework allows easily switching
+  between different sandboxing technologies with a single line of code and also
+  provides built in benchmarking options to evaluate costs.
 
-Using type information, \sys can identify where security checks are needed,
-automatically insert dynamic checks when possible, and force compiler errors
-for any security checks that require additional user intervention.  Our
-type-driven approach enables a systematic way to migrate \ff's renderer to use
-sandboxed libraries and allows \sys to support secure and
-efficient sharing of data structures between the renderer and library (e.g., by
-making shared memory operations safe and by lazily copying data out of the sandbox).
-
-
--->
-
-
-# Why do we need a common sandboxing Framwork
-
-!!! Section .0 text needs to be rewritten after seeing where two left off
-
-XXX elaborate on security justifications and migration justifications
-
-RLBox is a C++ framework that helps developers migrate and maintain code in
-application to safely use sandboxed libraries.
-
-
-The applications-library boundary is tightly coupled and by default application
-code is written assuming libraries are trusted. To benefit from sandboxing
-requires changing our threat model to assume libraries are untrusted, and modify
-the renderer-library interface accordingly (e.g, to sanitize untrusted inputs).
-
-While migrating to this model we made numerous mistakes—overlooking attack
-vectors and discovering many bugs only after building RLBox to help detect them.
-We present a few illustrative examples below.
-
-!!!!TODO!!!!
-
-We built the RLBox framework to tackle these challenges. RLBox is a pure C++
-library that helps developers migrate and maintain code in application to safely
-use sandboxed libraries. RLBox does this by providing APIs to invoke sandboxed
-functions, permit callbacks into the host application and more generally
-exchange data between the sandbox and application. These APIs are built around
-tainted types---these are wrapper types used to mark data received from the
-sandboxed library and impose a simple static information flow control (IFC)
-discipline.
-
-Thus, to migrate application code from use of an unsandboxed library, to a
-sandboxed library we must simply use the RLBox API for all interactions with the
-sandboxed library.
-
-This simple design for RLBox allows us to provide several features including
-
-- Ensuring the resulting code has security checks in appropriate locations
-- Providing a systematic approach to migrating application code to the RLBox API
-  accounting for ABI differences, data marshalling etc. automatically
-- Easily enabling or disabling different isolation technologies.
+These features are central to RLBox's approach to making library sandboxing more
+practical and we discuss these next.
 
 ## Eliminating confused deputy attacks
 
@@ -369,7 +322,7 @@ If we were to port this line with RLBox's automatic ABI conversions and security
 checks, the resulting code would look as follows.
 
 ```c++
-auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err" /* field */);
+auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err");
 auto err_field_swizzled = adjust_for_abi_convert_pointer(err_field);
 auto msg_field = adjust_for_abi_get_err_field(*err_field_swizzled, "msg_code");
 assert(in_sandbox_memory(msg_field)); // Bounds check
