@@ -104,20 +104,68 @@ particular, we had to sanitize all data and regulate control flow between
 sandboxed libraries and the browser to prevent libraries from breaking out of
 their sandbox.
 
-!!! we could put example of how things fail here
+For instance consider a single function in Firefox's JPEG decoder called
+`fill_input_buffer`. This is Firefox code for the fill_input buffer callback: a
+function invoked by libjpeg when requesting more bytes from the input stream.
+Below the Firefox code tries to expand the input data buffer. If it is unable to
+do so, it writes and error code to the `mInfo` structure--- a datastructure
+controlled by JPEG.
 
-While migrating Firefox to this model we made numerous mistakes---overlooking
-attack vectors and discovering many bugs only after building RLBox to help
-detect them.  Moreover, the upfront engineering effort of retrofitting the
-browser to sandbox any library was huge: We had port calls to library, adjust
-data structures to account for ABI differences (NaCl's machine model is
-different from the application), copy values to and from the sandbox, etc.  _in
-one step_. Only then could we run tests to ensure our retrofitting didn't break
-the browser. Since Firefox runs on many platforms---including platforms not
-supported by our SFI toolkit---we had to do this alongside the existing code
-that used the library unsandboxed, using a guard `#if SANDBOXED` to select
-between the old code and the new code. The patches become so complicated and
-unwieldy, we scrapped the effort and built RLBox to address these challenges.
+```
+void fill_input_buffer (j_decompress_ptr jd) {
+  ...
+  JOCTET * buf = (JOCTET *) realloc(...);
+  if (!buf) {
+    decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
+    ...
+  }
+}
+```
+
+This code snippet has multiple points of failure in the form of easy to miss
+security checks.
+
+- Failing to bounds check `err` prior to dereferencing it can result in a write
+  gadget.
+- Failing to swizzle the nested pointer mInfo.err prior to dereferencing, can
+  result in a write gadget or crash.
+- Failing to prevent multiple threads from invoking the above callback on the
+  same image can induce a data race and use-after-free vulnerability in turn.
+
+<!-- Actually I am thinking the above simple example may be enough -->
+<!-- Including one more, but we can remove this if needed -->
+
+Consider another example the same `fill_input_buffer` function.
+
+```
+void fill_input_buffer (j_decompress_ptr jd) {
+  struct jpeg_source_mgr * src = jd->src;
+  nsJPEGDecoder * decoder = jd->client_data;
+  ...
+  memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
+    src->next_input_byte, src->bytes_in_buffer);
+}
+```
+
+Since this callback is invoked by libjpeg, the callback parameters must be
+sanitized prior to use. Failure to do so allows control of all parameters of the
+memmove function giving libjpeg an arbitrary read write gadget.
+
+These are simply two examples from a single function in the JPEG decoder. When
+the effort to add required security checks to the hundreds of functions that
+interact with libjpeg, it is extremely easy to make mistakes. Indeed, while
+migrating Firefox to this model we made numerous mistakes---overlooking attack
+vectors and discovering many bugs only after building RLBox to help detect them.
+Moreover, the upfront engineering effort of retrofitting the browser to sandbox
+any library was huge: We had port calls to library, adjust data structures to
+account for ABI differences (NaCl's machine model is different from the
+application), copy values to and from the sandbox, etc.  _in one step_. Only
+then could we run tests to ensure our retrofitting didn't break the browser.
+Since Firefox runs on many platforms---including platforms not supported by our
+SFI toolkit---we had to do this alongside the existing code that used the
+library unsandboxed, using a guard `#if SANDBOXED` to select between the old
+code and the new code. The patches become so complicated and unwieldy, we
+scrapped the effort and built RLBox to address these challenges.
 
 -----
 
@@ -401,8 +449,8 @@ automatically ensure that C-language libraries do not violate the invariants
 expected by higher-level constructs in the source language. It would also
 provide greater security in general, as memory safety bugs in the C-language
 library would be prevented from compromising the larger application; an effort
-explored by multiple academic papers -- !!!tocite{robusta, sandcrust, some node
-thing?, lookup language sandboxes}!!!!.
+explored by multiple academic papers.
+!!!tocite{robusta, sandcrust, some node thing?, lookup language sandboxes}!!!!.
 
 Rust in particular offers an exciting target for RLBox. Rust satisfies the
 minimum requirements for RLBox's types in that it offers generics and allow
@@ -421,6 +469,8 @@ validators where needed, however this would encourage developers to consider
 sandboxing as an important tool for dependencies.
 
 # Conclusions
+
+!!! TODO
 
 # References
 
