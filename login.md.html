@@ -213,6 +213,8 @@ making shared memory operations safe and by lazily copying data out of the sandb
 
 # Why do we need a common sandboxing Framwork
 
+!!! Section .0 text needs to be rewritten after seeing where two left off
+
 XXX elaborate on security justifications and migration justifications
 
 RLBox is a C++ framework that helps developers migrate and maintain code in
@@ -252,7 +254,7 @@ This simple design for RLBox allows us to provide several features including
 
 ## Eliminating confused deputy attacks
 
-RLBox eliminated confused deputy attacks by mediating data and control flows at
+RLBox eliminates confused deputy attacks by mediating data and control flows at
 the renderer-sandbox interface and enforce security checks across this trust
 boundary. RLBox can do this by leveraging its type system and API design.
 
