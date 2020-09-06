@@ -514,14 +514,36 @@ allow RLBox to support this automatically.-->
 
 # Making Sandboxing a First Class Part of the Developer Experience
 
-In the further future, we envision first-class support in languages and their
-tooling for RLBox, and for sandboxing more broadly. First-class support in a
-language module system or in a package manager could allow users to
-seamlessly choose to sandbox libraries when importing dependencies, and could
-also automatically apply tainted types to all of the values coming out of the
-library. First-class support could also ensure that the syntax for using
-RLBox is as natural as possible -- for instance, invoking sandbox functions
-could share the same syntax as ordinary function calls. Language tooling
+While RLBox has been a boon for our work in Firefox, it's just a starting
+point.  Our hope is that library sandboxing will become a first class activity
+in future development environments, and that RLBox's capabilties will
+ultimately be subsumed by standard parts of tommorows languages, toolchains and
+package managers. We believe in many cases such support could allow the use of
+sandboxed libraries with a level of ease comperable to the use of unsandboxed
+libraries today.
+
+Libary sandboxing support in language module system or package manager could
+allow users to seamlessly choose to sandbox libraries when importing
+dependencies.  
+
+Packages could make explicit as part of their specification what
+privileges they need to carry out their task, and developers could then choose
+if and how to grant these privileges as part of importing a package.
+
+Integrated support for applying tainted types to values produced by sandboxed
+libraries could faciltate safe library use, and a natural syntax for invoking
+sandboxed functions ala. RLBox could make the transition to using sandboxed
+versions of libraries natural and seemless. 
+
+Much of the work of writing validators for tainted types could be mitigated by
+distributed validators as part of a sandboxed library. While this would entail
+placing trust in the author of the validors, because they are a relatively
+small amount of code, they cou
+
+
+
+XXX I don't understand the typescript thing.
+Language tooling
 could automatically adjust its build system to appropriately switch to a
 sandboxing compiler for libraries which the user wants to sandbox. The
 language could potentially even automatically pull in contract definitions
@@ -530,34 +552,45 @@ TypeScript. In short, first-class support for RLBox could make sandboxing
 even more seamless for users, resulting in greater security in the greater
 software ecosystem.
 
-Most languages support FFI to libraries written in other languages, particularly
-C. Integrating RLBox into the natural FFI support for a language would help
-automatically ensure that C-language libraries do not violate the invariants
-expected by higher-level constructs in the source language. It would also
-provide greater security in general, as memory safety bugs in the C-language
-library would be prevented from compromising the larger application; an effort
-explored by multiple academic papers.
+All mainstream programming languages support a foreign function interface (FFI)
+to invoke function in libraries written in other languages, particularly C, and
+many popular languages such as Python, Ruby, and Javascript (ala Node.js) make
+extensive use or native code in their standard libraries and package
+ecosystems. First class support for sandboxing native code as part of FFI
+interfaces, which has been explored in multiple research projects,
 !!!tocite{robusta, sandcrust, some node thing?, lookup language sandboxes}!!!!.
+could not only benefit assurnace, but also provide significant
+benefits for debugging as native code that violates invariants of the language
+runtime lead to notoriously difficult bugs.
 
-Rust in particular offers an exciting target for RLBox. Rust satisfies the
-minimum requirements for RLBox's types in that it offers generics and allow
-specifying operator behavior via typeclasses. Additionally, Rust's rich macro
-system and affine types allows it to provide even more features than the C++
-library; namely automatic struct support and time-of-check-time-of-use
-prevention. Most importantly Rust has an easy to use and powerful build and
-package management configured via a Cargo.toml file. Providing an extra flag
-here to indicate when a dependency should be sandboxed would be straightforward.
-The Rust build system could then compile this dependency to WebAssembly
-(something that is already supported), and automatically wrap the data returned
-by functions in these dependencies with tainted types. By doing this, Rust can
-offer a single configuration that allows users to sandbox dependencies. Of
-course developers are still responsible for modifying their code to add
-validators where needed, however this would encourage developers to consider
-sandboxing as an important tool for dependencies.
+Rust is a particularly compelling language ecosystem for an approach like
+RLBox. Rust's raison de etre (XXX fix punctuation) is safety, and it finds use
+in many settings where assurance is a paramount, thus the ability to more
+safely use native code fits in well with the overall Rust vision.
+
+At the language and tooling level, Rust is well suited to our approach.  Its
+support for generics and operator overloading via typeclasses naturally lends
+itself to our approach. It's rich macro system and affine types could also
+support features not possible in C++ RLBox; such as automatic struct support
+(XXX whats this) and time-of-check-time-of-use prevention. The presence of a
+powerful common build systems and package manager i.e. Cargo, also lends itself
+smooth support for library sandboxing. 
+
+%The Rust
+%build system (Cargo) could naturally be extended with an additional flag in the
+%Cargo.toml file, to to indicate when a dependency should be sandboxed, and
+%automatically augment function return values with tainted types. 
+%
+%Of course developers would still responsible for modifying their code to add
+%validators where needed, however this would encourage developers to consider
+%sandboxing as an important tool for dependencies.
+
+
 
 # Conclusions
 
-!!! TODO
+
+
 
 # References
 
