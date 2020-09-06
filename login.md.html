@@ -334,29 +334,30 @@ used to automate such checks.
 
 ## Minimizing sandboxing engineering effort
 
-While we have focussed on the security features of RLBox so far, RLBox has
-several features designed to greatly reduce engineering effort -- in practice,
-this is extremely important as without these features, migrating application
-code can quickly become tedious and error-prone. Below we present some of the
-challenges that prompted us S
+While we have mostly focussed on the security features of RLBox so far, RLBox
+has several features designed to greatly reduce engineering effort -- this is
+extremely important in practice. Without these features, modifying application
+code for correct and safe use sandboxed library can quickly become tedious and
+error-prone. We present just two of the main challenges below.
 
-For instance, SFI toolchains such as NaCl or Wasm have a different ABI than
-application code. Wasm and NaCl use a 32-bit machine model (LP32) i.e. the size
-of "long" and a "void*" in C code is 32-bits. Thus sharing data-structures
-between application code and libraries is not straightforward. Additionally it
-is not just differences in sizes, pointers in these toolchains have an
-altogether different format---pointers are stores as relative offsets from the
-base of the sandbox heap for performance. Thus any datastructure that are
-exchanged between the application and library must account for size differences
-as well as convert or "swizzle" the pointer representations appropriately.
+First, SFI toolchains such as NaCl or Wasm have a different ABI than application
+code. Specifically, Wasm and NaCl use a 32-bit machine model (LP32) for
+performance i.e. the size of "long" and a "void*" in C code is 32-bits. Thus
+sharing data-structures between application code and libraries is not
+straightforward. Additionally, pointers in these toolchains use a different
+format---pointers are stored as relative offsets from the base of the sandbox
+heap for performance. Thus any datastructure that is exchanged between the
+application and library must account for size differences as well as convert or
+"swizzle" the pointer representations appropriately.
 
-The other challenge in using the sandboxed libraries is performing the code
-changes required to migrate to using sandboxed libraries. Application may be
-very tightly coupled with the library that is to be sandboxed. For instance,
+Next, libraries are often tightly coupled to application code. For instance,
 when sandboxing the use of libjpeg in Firefox, we found that there are 25
 different API calls, 5 callbacks and many shared data structures between Firefox
-and libjpeg. We cannot reasonably expect application developers to migrate all
-interactions with sandboxed library to the RLBox API in a single step.
+and libjpeg. However, sandboxing mechanisms often require code to use the
+sanctioned means of performing function calls and callbacks---the springboards
+and trampolines. We cannot reasonably expect application developers to migrate
+all interactions with sandboxed library to the trampolines and springboards in a
+single step.
 
 RLBox addresses both of these challenges through a combination of automation and
 compiler driven feedback. We discuss how RLBox addresses both of these
@@ -368,20 +369,27 @@ RLBox automatically bridges ABI differences by leveraging the type system. In
 particular, RLBox uses two types---tainted<T> and tainted_volatile<T> to
 automate ABI conversions. The tainted type represents any numeric data
 influenced by the sandbox as well as pointers held by the application that refer
-to memory inside the sandbox, while the tainted_volatile<T> type is used for any
-data stored in sandbox memory i.e. can be modified by sandbox code.
+to memory inside the sandbox; the tainted_volatile<T> type is used for any data
+stored in sandbox memory i.e. it can be directly modified by sandbox code. 
+We note that tainted_volatile<T>  is an internal detail of RLBox and is never
+exposed to users of RLBox.
 
 This simple division allows RLBox to automatically apply ABI conversions, adjust
-field offsets in structs, correct pointer arithmetic, swizzle pointers as
-needed, and even automatically bounds check pointers appropriately as they are
-dereferenced. The easiest way to demonstrate the importance of this automation.
+field offsets in structs, correct pointer arithmetic, swizzle pointers by
+leveraging the type of data being operated on. These types even automatically
+bounds check pointers appropriately as they are dereferenced. To demonstrate the
+benefits of this automation, we show how one line of code from the previous
+example must be changed to account for ABI differences, with and without RLBox.
+
+Consider the following line of code from the previous example of
+`fill_input_buffer`.
 
 ```c++
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
-If we were to port this line with RLBox's automatic ABI conversions and security
-checks, the resulting code would look as follows.
+If we were to port this line _without_ RLBox's automatic ABI conversions and
+security checks, the resulting code would look as follows.
 
 ```c++
 auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err");
@@ -399,10 +407,6 @@ written i.e.
 ```c++
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
-
-We note that tainted_volatile<T>  is an internal detail of RLBox
-and is never exposed to users of RLBox.
-
 ### Incremental migration
 
 RLBox allows us to migrate application code to use the RLBox API one line at a
