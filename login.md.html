@@ -465,21 +465,33 @@ experimentation with many new hardware features. We discuss this next.
 
 ## Leveraging advances in SFI and hardware isolation
 
-As discussed RLBox's design allows it to be agnostic to the memory isolation
-technique. For example, consider Intel's Memory Protection Key features (MPK)
-which allow very efficient sandboxing of components. It would straightforward to
-implement RLBox support to use MPK as the isolation mechanism.
+As discussed RLBox's design allows it to easily switch between different
+sandboxing mechanisms. We have explored several in [[**NDG+20**][NDG+20]].
+However, many more mechanisms exist each offering different
+performance/compatibility/security trade-offs. A particular area of interest is
+the growth in native hardware based support for sandboxing.
 
-RLBox, also allows leveraging more complicated hardware security mechanisms. For
-instance consider ARM Cheri, which is a hardware feature that converts pointers
-into capabilities that apply bounds checks. Since this feature expands the size
-of pointers it may not be easy to deploy for all applications especially if the
-increased pointer size introduces incompatibilities. Furthermore it would not be
-easy to apply this to just a portion of the code as any data-structures from
-this portion of code would have ABI incompatibilities with the rest of the
-application. However, since the RLBox can automatically adjust for ABI
-differences, applications can straightforwardly use Cheri to secure a single
-component in an application.
+For example, consider Intel's Memory Protection Key features (MPK). This allows
+very efficient sandboxing of components, and is largely compatible and easy to
+use with existing code as shown in !!! ERIM !!!. Due to RLBox, design, it would
+straightforward to implement RLBox support to use MPK as the isolation
+mechanism.
+
+Another interesting example is CHERI---an approach to supporting a capability
+based model for architectures such as ARM, RISC-V etc. Here, the hardware
+enforcement would include and apply bounds checks for all pointers and pointer
+dereferences. However, this feature does expand the size of pointers, so it may
+not be easy to deploy for all applications especially if the increased pointer
+size introduces incompatibilities. Furthermore, it would not be easy to apply
+CHERI to just the portion of the code that is compatible; this would make any
+data-structures from this portion of code have a different ABI with the rest of
+the application. However, since RLBox can automatically adjust for ABI
+differences, applications can straightforwardly use CHERI to secure parts of the
+application that are compatible with CHERI.
+
+<!-- Should we include the DONKY example for RISC-V? Not sure if that is purely
+an academic proposal or was something that would potentially be implemented. If
+it is going to be implemented, we should totally mention this.  -->
 
 # Language support for Sandboxing with Tainted Types
 
