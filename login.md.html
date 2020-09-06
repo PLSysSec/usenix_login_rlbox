@@ -426,17 +426,53 @@ using the noop sandbox---a change that has little to no overhead (< 1%). The
 downstream Tor configuration could however specify an isolation mechanism that
 provides enforcement.
 
-Indeed this flexibility in switching between memory isolation also allows easy
-experimentation with many new hardware features. We discuss this next.
+## Beyond sandboxing
+
+Although the focus of RLBox is sandboxing, the techniques used by RLBox tackle
+many general problems such as securing interactions between trusted and
+untrusted code, disaggregating highly intertwined components, bridging ABI
+incompatibilities etc. Thus, before we discuss the future for RLBox sandboxing,
+we briefly discuss some additional uses of RLBox's techniques.
+
+TEE runtimes: Applications running on the trusted execution environments such as
+Intel SGX must frequently interface with untrusted code; indeed code from the
+host OS is also considered untrusted in this context. When reviewing the code of
+multiple TEE runtimes, Van Bulck et al.!!!\cite{two-worlds-sgx}!!! discovered
+that almost all frameworks have bugs pertaining to use of unchecked data---bugs
+that RLBox would prevent by construction. Furthermore, we believe that RLBox may
+need little to no modification for use to mitigate such problems in TEE
+runtimes.
+
+OS kernels: Operating system kernel code frequently handles userspace pointers,
+but must be careful to never dereference them before checking. In fact, prior
+work !!!cite{cqual-kernel-ptr}!!! has extended compiler support for C's
+attributes to achieve the same affect of having a wrapped type.
+
+Browser IPC layers: Modern browsers employ multiple processes to reduce their
+security surface and to employ features such as site-isolation. This
+architecture means that data often has to be transferred back and forth between
+various processes, some of which are potentially compromised. Like in RLBox, use
+of tainted types here would preventing misuse of unchecked data and offer lazy
+marshalling of data, improving both security and performance.
+
+Handling untrusted user inputs: More generally, there are large classes of
+vulnerabilities that stem from use of unsanitized data. RLBox addresses this
+challenge in the context of sandboxing with tainted types and required
+validators before data use. Similar solutions employing wrapper types are
+possible and have been explored for some of these domains. For example, trusted
+types in JavaScript to prevent XSS. Such techniques can also help mitigate SQL
+injection, unchecked printf format string vulnerabilities etc.
 
 # Bringing RLBox support to more platforms
 
-Though we implemented RLBox in C++ and focus on sandboxing C libraries, the
-concepts behind RLBox are very general can be applied to variety of languages
-and platforms. Additionally, while we have so far used Wasm as our sandboxing
-mechanism, RLBox can easily leverage platform specific mechanisms including
-hardware mechanisms such as Intel MPK or CHERI to efficiently enforce isolation.
-We discuss expanding support for RLBox below.
+We have thus far discussed RLBox in its current form---a framework written used
+by C++ programs to sandbox buggy libraries (typically written in C) by
+leveraging Wasm as a sandboxing mechanism. However, we believe the concepts
+behind RLBox are very general can be easily extended to other languages and
+platforms. In this section, we discuss the steps needed to bring RLBox to
+additional languages as well as how RLBox allows leveraging platform specific
+sandboxing mechanisms such as Intel MPK or CHERI to efficiently enforce
+isolation.
 
 ## Supporting additional languages
 
