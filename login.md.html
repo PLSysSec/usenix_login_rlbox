@@ -187,29 +187,29 @@ type level--and by providing APIs to both mediate these flows and enforce
 security checks across the trust boundary.
 
 RLBox mediates data flow using _tainted types_---type wrappers used to
-demarkcate data originating from the sandbox.  We use tainted values to ensure
+demarcate data originating from the sandbox.  We use tainted values to ensure
 that application code cannot use sandboxed data unsafely.  For example, while
-application code can add two `tainted<int>` (to produce another
+application code can add two `tainted<int>`s (to produce another
 `tainted<int>`), it cannot branch on such values or use them as indexes into an
-array. Instead, the application must validate before it can use it.
+array. Instead, the application must validate tainted values before it can use
+them.
 
 RLBox mediates control flow by providing APIs for invoking sandboxed functions,
 registering host functions as callbacks---to allow the sandbox to call into the
 application---and more generally exchange data between the sandbox and
-application.  For example, application must use `sandbox_invoke(sbx_fn,
+application.  For example, the application must use `sandbox_invoke(sbx_fn,
 args...)` to invoke functions in the sandbox; sandboxed functions cannot be
 called directly.  Similarly, sandboxed code cannot call into the application
-aribrarily; instead, the application must register callback functions using the
+arbitrarily; instead, the application must register callback functions using the
 `sandbox_callback(app_fn)` API. These APIs are also key to data flow safety:
 They impose a strict tainted type discipline, requiring all return values of
 sandboxed functions and all callback arguments to be tainted.
 
-This tained type-driven approach addresses the challenges we outlined above and
-our goal for modularity:
+This tainted type-driven approach addresses the challenges we outlined above:
 
 - **Security:** RLBox eliminates most traps and pitfalls by turning unsafe
-  control- and data-flows into type errors and, in some cases, by performing
-  automatic security checks.  For example, RLBox automatically sanitizes
+  control- and data-flows into type errors and, where possible, by performing
+  automatic security checks.  Concretely, RLBox automatically sanitizes
   sandbox-supplied (tainted) pointers to ensure they point sandbox memory,
   swizzles pointers that cross the trust boundary, and statically identifies
   locations where tainted data must be validated before use.
@@ -219,17 +219,19 @@ our goal for modularity:
   to the next required code change---e.g., data that needs to be validated
   before use, or control transfer code that needs to be changed to use the
   RLBox APIs.  This allows developers to incrementally port application code
-  one line at a time, instead of wholesale.
+  one line at a time and test it, in turn.
 
   By forcing all control and data flow to go though explicit APIs, RLBox
-  automatically handles ABI differences in shared datastructures and makes it
-  easy for developers to switch the underlying isolation mechanisms. This, in
-  turn, means that the the code interfacing with the library doesn't have to
-  change across platforms (e.g., on platform where NaCl or WebAssembly is not
-  supported developers can just use the null-sandbox as the underling
-  "isolation mechanim").
+  automatically handles ABI differences in shared data structures and makes it
+  easy for developers to switch the underlying isolation mechanisms.
+  Importantly, this means that the code interfacing with the library doesn't
+  have to change---or be duplicated---across platforms (e.g., on platform where
+  NaCl or WebAssembly is not supported developers just need to change one line
+  to use the null-sandbox as the underling "isolation mechanism" instead of
+  NaCl or Wasm).
 
-We ellaborate on both below, and discuss new uses cases this framework enables.
+We elaborate on both below, and discuss several scenarios, beyond sandboxing,
+where our framework can be useful.
 
 ## Using tainted types for security
 
