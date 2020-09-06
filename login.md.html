@@ -546,13 +546,13 @@ application that are compatible with CHERI.
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
 point.  Our hope is that library sandboxing will become a first class activity
-in future development environments, and that RLBox's capabilties will
-ultimately be subsumed by standard parts of tommorows languages, toolchains and
+in future development environments, and that RLBox's capabilities will
+ultimately be subsumed by standard parts of tomorrow's languages, toolchains and
 package managers. We believe in many cases such support could allow the use of
-sandboxed libraries with a level of ease comperable to the use of unsandboxed
+sandboxed libraries with a level of ease comparable to the use of unsandboxed
 libraries today.
 
-Libary sandboxing support in language module system or package manager could
+Library sandboxing support in language module system or package manager could
 allow users to seamlessly choose to sandbox libraries when importing
 dependencies.  
 
@@ -561,25 +561,25 @@ privileges they need to carry out their task, and developers could then choose
 if and how to grant these privileges as part of importing a package.
 
 Integrated support for applying tainted types to values produced by sandboxed
-libraries could faciltate safe library use, and a natural syntax for invoking
+libraries could facilitate safe library use, and a natural syntax for invoking
 sandboxed functions ala. RLBox could make the transition to using sandboxed
-versions of libraries natural and seemless. 
+versions of libraries natural and seamless.
 
 Much of the work of writing validators for tainted types could be mitigated by
 distributed validators as part of a sandboxed library. While this would entail
-placing trust in the author of the validors, because they are a relatively
+placing trust in the author of the validators, because they are a relatively
 small amount of code, auditing them could be quite tractable.
 
 
-XXX I don't understand the typescript thing.
-Language tooling
-could automatically adjust its build system to appropriately switch to a
-sandboxing compiler for libraries which the user wants to sandbox. The
-language could potentially even automatically pull in contract definitions
+!!! TODO --- Clarify (and or remove) the typescript thing.
+
+Language tooling could automatically adjust its build system to appropriately
+switch to a sandboxing compiler for libraries which the user wants to sandbox.
+The language could potentially even automatically pull in contract definitions
 for each library's interface, using a system similar to what we see today for
-TypeScript. In short, first-class support for RLBox could make sandboxing
-even more seamless for users, resulting in greater security in the greater
-software ecosystem.
+TypeScript. In short, first-class support for RLBox could make sandboxing even
+more seamless for users, resulting in greater security in the greater software
+ecosystem.
 
 All mainstream programming languages support a foreign function interface (FFI)
 to invoke function in libraries written in other languages, particularly C, and
@@ -587,13 +587,13 @@ many popular languages such as Python, Ruby, and Javascript (ala Node.js) make
 extensive use or native code in their standard libraries and package
 ecosystems. First class support for sandboxing native code as part of FFI
 interfaces, which has been explored in multiple research projects,
-!!!tocite{robusta, sandcrust, some node thing?, lookup language sandboxes}!!!!.
-could not only benefit assurnace, but also provide significant
+!!! TODO --- cite{robusta, sandcrust} probably some more stuff --- node, other langs}.
+could not only benefit assurance, but also provide significant
 benefits for debugging as native code that violates invariants of the language
 runtime lead to notoriously difficult bugs.
 
 Rust is a particularly compelling language ecosystem for an approach like
-RLBox. Rust's raison de etre (XXX fix punctuation) is safety, and it finds use
+RLBox. Rust's raison d'être is safety, and it finds use
 in many settings where assurance is a paramount, thus the ability to more
 safely use native code fits in well with the overall Rust vision.
 
@@ -601,13 +601,16 @@ At the language and tooling level, Rust is well suited to our approach.  Its
 support for generics and operator overloading via typeclasses naturally lends
 itself to our approach. It's rich macro system and affine types could also
 support features not possible in C++ RLBox; such as automatic struct support
-(XXX whats this) and time-of-check-time-of-use prevention. 
+and time-of-check-time-of-use prevention.
+
+!!! TODO --- struct support is not explained
 
 The presence of a powerful common build systems and package manager i.e. Cargo,
 also lends itself smooth support for library sandboxing.  Extending Cargo with
 an additional flag in the Cargo.toml file, to to indicate when a dependency
 should be sandboxed could be quite straightforward.
 
+!!! TODO --- some text about syntax being better
 <!--
 , and automatically augment function return values with
 tainted types could be quite natural. 
