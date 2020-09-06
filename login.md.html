@@ -491,8 +491,7 @@ versions of libraries natural and seemless.
 Much of the work of writing validators for tainted types could be mitigated by
 distributed validators as part of a sandboxed library. While this would entail
 placing trust in the author of the validors, because they are a relatively
-small amount of code, they cou
-
+small amount of code, auditing them could be quite tractable.
 
 
 XXX I don't understand the typescript thing.
@@ -525,19 +524,22 @@ At the language and tooling level, Rust is well suited to our approach.  Its
 support for generics and operator overloading via typeclasses naturally lends
 itself to our approach. It's rich macro system and affine types could also
 support features not possible in C++ RLBox; such as automatic struct support
-(XXX whats this) and time-of-check-time-of-use prevention. The presence of a
-powerful common build systems and package manager i.e. Cargo, also lends itself
-smooth support for library sandboxing. 
+(XXX whats this) and time-of-check-time-of-use prevention. 
 
-%The Rust
-%build system (Cargo) could naturally be extended with an additional flag in the
-%Cargo.toml file, to to indicate when a dependency should be sandboxed, and
-%automatically augment function return values with tainted types. 
-%
-%Of course developers would still responsible for modifying their code to add
-%validators where needed, however this would encourage developers to consider
-%sandboxing as an important tool for dependencies.
+The presence of a powerful common build systems and package manager i.e. Cargo,
+also lends itself smooth support for library sandboxing.  Extending Cargo with
+an additional flag in the Cargo.toml file, to to indicate when a dependency
+should be sandboxed could be quite straightforward.
 
+<!--
+, and automatically augment function return values with
+tainted types could be quite natural. 
+
+Of course developers would still responsible for modifying their code to add
+validators where needed, however this would encourage developers to consider
+sandboxing as an important tool for dependencies.
+
+-->
 
 
 # Conclusions
