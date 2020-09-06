@@ -206,68 +206,32 @@ aribrarily; instead, the application must register callback functions using the
 They impose a strict tainted type discipline, requiring all return values of
 sandboxed functions and all callback arguments to be tainted.
 
+This tained type-driven approach addresses the challenges we outlined above:
 
-# Why we need a common sandboxing Framework
+- **Security:** RLBox eliminates most traps and pitfalls by turning unsafe
+  control- and data-flows into type errors and, in some cases, by performing
+  automatic security checks.  For example, RLBox automatically sanitizes
+  sandbox-supplied (tainted) pointers to ensure they point sandbox memory,
+  swizzles pointers that cross the trust boundary, and statically identifies
+  locations where tainted data must be validated before use.
 
-RLBox is a pure C++ library that helps developers migrate, maintain code in
-application to securely use sandboxed libraries. RLBox does this by providing
-APIs to invoke sandboxed functions, permit callbacks into the host application
-and more generally exchange data between the sandbox and application. These APIs
-are built around tainted types---these are wrapper types used to mark data
-received from the sandboxed library and impose a simple static information flow
-control (IFC) discipline.
+- **Engineering effort:** Compile-time type errors guide the developer through
+  the process of migrating a library into a sandbox. Each compile error points
+  to the next required code change---e.g., data that needs to be validated
+  before use, or control transfer code that needs to be changed to use the
+  RLBox APIs.  This allows developers to incrementally port application code
+  one line at a time, instead of wholesale.
 
-Importantly, RLBox was designed to precisely address the challenges presented in
-the previous section, namely, minimizing the effort to securely and efficiently
-sandbox libraries. The core of the challenge here is that the
-applications-library boundary is tightly coupled and by default application code
-is written assuming libraries are trusted. To benefit from sandboxing requires
-changing our threat model to assume libraries are untrusted, and modify the
-renderer-library interface accordingly (e.g, to sanitize untrusted inputs). In
-the RLBox model, interactions with the sandboxed library must go through the
-RLBox API. This allows RLBox to offer several useful features:
+  By forcing all control and data flow to go though explicit APIs, RLBox
+  automatically handles ABI differences in shared datastructures and makes it
+  easy for developers to switch the underlying isolation mechanisms. This, in
+  turn, makes patches simpler: The code interfacing with the library doesn't
+  have to change across platforms (e.g., on platform where NaCl or WebAssembly
+  is not supported we just use the noop-sandbox).
 
-- Automate security checks: Pointer swizzle operations, bounds checks that
-  ensure sandbox-supplied pointers point to sandbox memory, and identifying
-  locations where tainted data from the sandbox must be validated before use is
-  done automatically.
-- Reduce engineering effort: The RLBox framework reduces effort by automatically
-  handling all ABI differences in shared datastructures. Furthermore, RLBox
-  allows developers to incrementally port application code one line at a time,
-  such that the application compiles and runs with full functionality
-  (passing all tests) between each step of porting.
-- Evaluating performance tradeoffs: The RLBox framework allows easily switching
-  between different sandboxing technologies with a single line of code and also
-  provides built in benchmarking options to evaluate costs.
-
-These features are central to RLBox's approach to making library sandboxing more
-practical and we discuss these next.
+We ellaborate on both next.
 
 ## Automating security checks to eliminate confused deputy attacks
-
-RLBox secures interactions between the application code and sandboxed libraries
-by mediating data and control flows at the renderer-sandbox interface and
-enforce security checks across this trust boundary.
-
-In particular, RLBox mediates data flow with tainted types that impose a simple
-static information flow control (IFC) discipline. This ensures that sandbox data
-is validated before any potentially unsafe use. It also prevents pointer leaks
-into the sandbox that could break ASLR. RLBox mediates control flow through a
-combination of tainted types and API design. Tainting, for example, allows RLBox
-to prevent branching on tainted values that have not been validated. API design,
-on the other hand, is used to restrict control transfers between the renderer
-and sandbox. For instance, the renderer must use sandbox_invoke() to invoke
-functions in the sandbox; any callback into the renderer by the sandbox must
-first be registered by the renderer using the sandbox_callback(callback_fn) API.
-
-<!-- These mediation allows RLBox to enforce security through two approaches. First, it automates
-security checks such as bounds checking sandbox-supplied pointers to ensure they
-point within sandbox memory as well as the identifying of locations where
-tainted data must be validated. Second, RLBox uses compile-time type errors to
-guide the developer through the process of migrating a library into a sandbox.
-Each compile error points to the next required code change---e.g., data that
-needs to be validated before use, or control transfer code that needs to be
-changed to use RLBox APIs. -->
 
 For example, if we consider the example shown earlier, RLBox's compiler errors
 would require us to mark the parameters jd, and the jpeg data structure mInfo as
