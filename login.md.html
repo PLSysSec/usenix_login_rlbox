@@ -206,6 +206,8 @@ aribrarily; instead, the application must register callback functions using the
 They impose a strict tainted type discipline, requiring all return values of
 sandboxed functions and all callback arguments to be tainted.
 
+!!! TODO --- talk about other tainting use cases here
+
 This tained type-driven approach addresses the challenges we outlined above and
 our goal for modularity:
 
@@ -432,7 +434,58 @@ provides enforcement.
 Indeed this flexibility in switching between memory isolation also allows easy
 experimentation with many new hardware features. We discuss this next.
 
-## Leveraging advances in SFI and hardware isolation
+# Bringing RLBox support to more platforms
+
+Though we implemented RLBox in C++ and focus on sandboxing C libraries, the
+concepts behind RLBox are very general can be applied to variety of languages
+and platforms. Additionally, while we have so far used Wasm as our sandboxing
+mechanism, RLBox can easily leverage platform specific mechanisms including
+hardware mechanisms such as Intel MPK or CHERI to efficiently enforce isolation.
+We discuss expanding support for RLBox below.
+
+## Supporting additional languages
+
+RLBox is currently implemented in C++ and relies on several C++ features to
+implement its security checks and automation. However, the underlying principles
+can be easily translated to other languages. To better understand how to bring
+RLBox to other languages, we first explain how RLBox uses various C++ features.
+
+RLBox primarily relies on the use of tainted types (implemented via C++
+templates) and leverages compiler type checking to enforce security properties.
+RLBox also permits safe operations on tainted types under certain constraints by
+taking advantage of operator overloading, and enforces constraints on these
+operations using C++ metaprogramming techniques.
+
+Many other languages include features which can be used to implement the same
+general RLBox principles. For instance, statically-typed languages typically
+offer some form of generics or templates that can be used to implement
+RLBox's tainted and tainted_volatile types. A notable exception here is
+C---supporting RLBox in C would require some tool for code generation.
+Similarly, many languages allow operator overloading, which RLBox uses to
+provide safe operations on tainted types while preserving the original syntax of
+the language. (For instance, in C++, RLBox allows dereferencing a tainted<int*>
+via the natural '->' and '*' operators, but with automatically inserted bounds
+checks.)
+
+Frameworks like RLBox can also be used to enforce security in dynamically
+typed languages like JavaScript. However, without compiler assistance, RLBox
+cannot provide helpful compile-time assistance, with errors instead manifesting
+as runtime errors. While this affects some of the usability of RLBox, we can
+still enforce strong security guarantees equivalent to those in C++.
+
+This is just the beginning! We envision a future where RLBox could leverage
+many additional language features as well. For instance, RLBox could take
+advantage of Rust's affine types to automatically prevent
+time-of-check-time-of-use attacks and double fetch attacks. RLBox could also
+leverage contracts --- as recently proposed for C++, or for Wasm's interface
+types extended with data invariants --- to automatically validate tainted data
+prior to use.
+
+<!-- RLBox currently requires extra user specification (in the form of macros)
+to fully support structs. However, C++ metaclasses and reflection support will
+allow RLBox to support this automatically.-->
+
+## Leveraging advances in hardware isolation
 
 As discussed RLBox's design allows it to easily switch between different
 sandboxing mechanisms. We have explored several in [[**NDG+20**][NDG+20]].
@@ -457,57 +510,6 @@ data-structures from this portion of code have a different ABI with the rest of
 the application. However, since RLBox can automatically adjust for ABI
 differences, applications can straightforwardly use CHERI to secure parts of the
 application that are compatible with CHERI.
-
-<!-- Should we include the DONKY example for RISC-V? Not sure if that is purely
-an academic proposal or was something that would potentially be implemented. If
-it is going to be implemented, we should totally mention this.  -->
-
-# Language support for Sandboxing with Tainted Types
-
-Though we implemented RLBox in C++ to sandbox C libraries, we believe the
-underlying principles translate to other languages. Going even further, we
-propose first class support for RLBox in languages and their tooling. Not only
-would this make the use of tainted type more seamless, it would allow developers
-to sandbox dependencies as they first import them into their project.
-
-## RLBox's use of language features
-
-To understand how to bring RLBox to other languages, we need to first
-understand which C++ features RLBox relies on. Primarily, RLBox uses tainted
-types (implemented via C++ generics) and leverages compiler type checking to
-enforce security properties. RLBox also permits safe operations on tainted
-types under certain constraints by taking advantage of operator overloading,
-and enforces constraints on these operations using C++ metaprogramming
-techniques.
-
-Many other languages include features which can be used to implement the same
-general RLBox principles. For instance, many statically-typed languages offer
-some form of generics or templates which could be used to implement RLBox's
-tainted and tainted_volatile types. A notable exception here is
-C---supporting RLBox in C would require some tool for code generation.
-Similarly, many languages allow operator overloading, which RLBox uses to
-provide safe operations on tainted types while preserving the original
-syntax of the language. (For instance, in C++, RLBox allows dereferencing
-a tainted<int*> via the natural '->' and '*' operators, but with automatically
-inserted bounds checks.)
-
-Frameworks like RLBox can also be used to enforce security in dynamically
-typed languages like JavaScript. However, without compiler assistance, RLBox
-cannot provide helpful compile-time assistance, which is especially important
-during incremental porting. Instead, the errors would manifest as runtime
-errors. Thus, while the usability of RLBox would be reduced, the security
-guarantees would be the same.
-
-This is just the beginning! We envision a future where RLBox could leverage
-many additional language features as well. For instance, RLBox could take
-advantage of Rust's affine types to automatically prevent
-time-of-check-time-of-use attacks and double fetch attacks. RLBox could also
-leverage contracts --- as recently proposed for C++, or for Wasm's interface
-types --- to automatically validate tainted data prior to use.
-
-<!-- RLBox currently requires extra user specification (in the form of macros)
-to fully support structs. However, C++ metaclasses and reflection support will
-allow RLBox to support this automatically.-->
 
 # Making Sandboxing a First Class Part of the Developer Experience
 
