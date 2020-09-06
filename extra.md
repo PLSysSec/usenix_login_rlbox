@@ -39,3 +39,18 @@ techniques can also help with SQL injection bugs, printf unchecked format string
 bugs etc.
 
 
+The Rust build system could then compile this dependency to WebAssembly
+(something that is already supported), and automatically wrap the data returned
+by functions these dependencies with tainted types. By doing this, Rust can
+offer a single configuration that allows users to sandbox dependencies.
+
+The Rust
+build system (Cargo) could naturally be extended with an additional flag in the
+Cargo.toml file, to to indicate when a dependency should be sandboxed, and
+automatically augment function return values with tainted types. 
+
+Of course developers would still responsible for modifying their code to add
+validators where needed, however this would encourage developers to consider
+sandboxing as an important tool for dependencies.
+
+
