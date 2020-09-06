@@ -82,7 +82,7 @@ to do to bring sandboxing to other languages.  Finally, we end with a vision of
 what software development could look like with broader first-class support for
 sandboxing.
 
-# Library sandboxing in Firefox with RLBox
+# The road to RLBox: library sandboxing in Firefox
 
 Firefox, like other browsers, relies on dozens of third-party libraries to
 decode audio, images, fonts, and other content. Since these libraries have been
@@ -180,13 +180,13 @@ the old code and the new code. We tried this approach. But the patches become
 so complicated and unwieldy, we couldn't image anybody maintaining this code.
 We built RLBox and started anew.
 
-## RLBox framework
+# The RLBox framework
 
-RLBox is a C++ library designed to help developers retrofit application to
-securely use sandboxed libraries.  RLBox does this by making data and control
-flow at the application-sandbox boundary explicit---at the type level--and by
-providing APIs to both mediate these flows and enforce security checks across
-the trust boundary.
+RLBox is a C++ library designed to make it easier for developers to retrofit
+application to securely use sandboxed libraries.  RLBox does this by making
+data and control flow at the application-sandbox boundary explicit---at the
+type level--and by providing APIs to both mediate these flows and enforce
+security checks across the trust boundary.
 
 RLBox mediates data flow using _tainted types_---type wrappers used to
 demarkcate data originating from the sandbox.  We use tainted values to ensure
@@ -202,7 +202,9 @@ application.  For example, application must use `sandbox_invoke(sbx_fn,
 args...)` to invoke functions in the sandbox; sandboxed functions cannot be
 called directly.  Similarly, sandboxed code cannot call into the application
 aribrarily; instead, the application must register callback functions using the
-`sandbox_callback(app_fn)` API.
+`sandbox_callback(app_fn)` API. These APIs are also key to data flow safety:
+They impose a strict tainted type discipline, requiring all return values of
+sandboxed functions and all callback arguments to be tainted.
 
 
 # Why we need a common sandboxing Framework
