@@ -206,7 +206,8 @@ aribrarily; instead, the application must register callback functions using the
 They impose a strict tainted type discipline, requiring all return values of
 sandboxed functions and all callback arguments to be tainted.
 
-This tained type-driven approach addresses the challenges we outlined above:
+This tained type-driven approach addresses the challenges we outlined above and
+our goal for modularity:
 
 - **Security:** RLBox eliminates most traps and pitfalls by turning unsafe
   control- and data-flows into type errors and, in some cases, by performing
@@ -222,14 +223,16 @@ This tained type-driven approach addresses the challenges we outlined above:
   RLBox APIs.  This allows developers to incrementally port application code
   one line at a time, instead of wholesale.
 
-  By forcing all control and data flow to go though explicit APIs, RLBox
-  automatically handles ABI differences in shared datastructures and makes it
-  easy for developers to switch the underlying isolation mechanisms. This, in
-  turn, makes patches simpler: The code interfacing with the library doesn't
-  have to change across platforms (e.g., on platform where NaCl or WebAssembly
-  is not supported we just use the noop-sandbox).
+- **Modularity:** By forcing all control and data flow to go though explicit
+  APIs, RLBox automatically handles ABI differences in shared datastructures and
+  makes it easy for developers to switch the underlying isolation mechanisms.
+  This makes it easy to take advantage of new advances in isolation mechanisms:
+  The code interfacing with the library doesn't have to change across platforms
+  (e.g., on platform with MPK we can take advantage of the hardware isolation
+  mechanim, otherwise we can fall back to software, or even disable isolation
+  altogether).
 
-We ellaborate on both below, and discuss new uses cases this framework enables.
+We ellaborate on these next.
 
 ## Automating security checks to eliminate confused deputy attacks
 
