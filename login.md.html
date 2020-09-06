@@ -149,7 +149,7 @@ now-untrusted library boundary. Among other things, we must:
 - Sanitize the nested pointer `mInfo.err` on line 10 prior to dereferencing.
 - Sanitize the pointer `decoder->mBackBuffer + decoder->mBackBufferLen` used on
   the destination address to `memmove()` on line 16.
-- "Swizzle" pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate
+- Swizzle pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate
   the pointers to account for the potentially different machine model of the
   sandbox. Both NaCl and WebAssembly have different pointer representations.
 - Ensure that multiple threads can't invoke the callback on the same image,
