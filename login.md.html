@@ -180,7 +180,33 @@ the old code and the new code. We tried this approach. But the patches become
 so complicated and unwieldy, we couldn't image anybody maintaining this code.
 We built RLBox and started anew.
 
-# RLBox framework
+## RLBox framework
+
+RLBox is a C++ library designed to help developers retrofit application to
+securely use sandboxed libraries.  RLBox does this by making data and control
+flow at the application-sandbox interface explicit at the type level and by
+providing APIs to both mediate these flows and enforce security checks across
+the trust boundary.
+
+RLBox mediates data flow with _tainted_ types that impose a simple static
+information flow control (IFC) discipline.  This ensures that sandbox data is
+validated before any potentially unsafe use.
+
+RLBox mediates control flow through a combination of \tainted types and 
+API design.
+%
+Tainting, for example, allows RLBox to prevent branching on \tainted values that
+have not been validated.
+%
+API design, on the other hand, is used to restrict control transfers between
+the renderer and sandbox.
+%
+For instance, the renderer must 
+use \code{sandbox_invoke()} to invoke functions in the sandbox; any callback
+into the renderer by the sandbox must first be registered by the renderer using
+the \code{sandbox_callback(callback_fn)} API.
+
+Mediating control and data flow allows \sys to:
 
 # Why we need a common sandboxing Framework
 
