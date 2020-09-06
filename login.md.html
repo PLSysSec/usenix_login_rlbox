@@ -56,29 +56,30 @@ and automated text completion.
 
 Recent advances in compiler and processor architecture space have made
 efficient in-process isolation increasingly practical in a wide range of use
-cases.  But, to make library sandboxing a goto tool in more software
-engineering environments, the missing element has been a common framework that
-makes it easy to sandbox libraries (1) _securely_, to correctly enforce a
-secure interface between the untrusted library and the application, and (2)
-_effectively_, to minimize the engineering effort required to sandbox a
-library.
+cases.  However, to make library sandboxing a goto tool in more software
+engineering environments, a missing element has been a common framework that
+makes it easy to sandbox libraries (1) _securely_, ensuring the interface
+between the untrusted library and the application code is correct, and with (2)
+_minimal engineering effort_, so that the cost of migrating libraries
+and applications to sandboxing is not prohibitive.
 
 Our own experience sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive, and
 very prone to security bugs. In contrast, once we developed the RLBox framework
 [[**NDG+20**][NDG+20]] the incremental work to sandbox new libraries became
 minimal, and more opportunities to sandbox additional parts of the application
-became apparent. We think other applications can benefit from RLBox and as an
-example, in [[**NDG+20**][NDG+20]], we demonstrated its use sandboxing
-third-party Apache and native Node.js modules.
+became apparent. Many other applications can benefit from RLBox. For example, in
+[[**NDG+20**][NDG+20]], we explored its application to sandboxing third-party
+Apache and native Node.js modules. Further, RLBox can serve as a practical
+model for supporting library sandboxing in other languages and programming
+environments.
 
-In the rest of this article we describe the experience that led to RLBox, then
-we describe how RLBox works, how it leverages the C++ type systems to make
-sandboxing practical, and how our type-driven approach can be used in other
-domains (e.g., trusted execution environments).  Then we outline what we need
-to do to bring sandboxing to other languages.  Finally, we end with a vision of
-what software development could look like with broader first-class support for
-sandboxing.
+In the rest of this article we describe the experience that led to RLBox, how
+RLBox works and how it leverages the C++ type systems to make sandboxing
+practical, and how our type-driven approach can be used in other domains (e.g.,
+trusted execution environments).  Then we outline how this approach can
+translate to other languages.  Finally, we end with a vision of what software
+development could look like with broader first-class support for sandboxing.
 
 # The road to RLBox: library sandboxing in Firefox
 
