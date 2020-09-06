@@ -112,7 +112,9 @@ their sandbox. Doing this manually was prone to error and onerous.
 To illustrate the kinds of security challenges  we encountered, consider, for
 instance, refactoring the `fill_input_buffer` JPEG decoder function in Firefox.
 This function is called by the libjpeg library whenever it needs more bytes
-from Firefox.
+from Firefox. Additionally, Firefox must save the currently unused input bytes
+held by libjpeg to an internal back buffer and resend this libjpeg along with
+additional input.
 
 ```cpp
  1: void fill_input_buffer (j_decompress_ptr jd) {
@@ -216,62 +218,93 @@ RLBox API. This allows RLBox to offer several useful features:
 These features are central to RLBox's approach to making library sandboxing more
 practical and we discuss these next.
 
-## Eliminating confused deputy attacks
+## Automating security checks to eliminate confused deputy attacks
 
-RLBox eliminates confused deputy attacks by mediating data and control flows at
-the renderer-sandbox interface and enforce security checks across this trust
-boundary. RLBox can do this by leveraging its type system and API design.
+RLBox secures interactions between the application code and sandboxed libraries
+by mediating data and control flows at the renderer-sandbox interface and
+enforce security checks across this trust boundary.
 
-RLBox mediates data flow with tainted types that impose a simple static
-information flow control (IFC) discipline. This ensures that sandbox data is
-validated before any potentially unsafe use. It also prevents pointer leaks into
-the sandbox that could break ASLR.
+In particular, RLBox mediates data flow with tainted types that impose a simple
+static information flow control (IFC) discipline. This ensures that sandbox data
+is validated before any potentially unsafe use. It also prevents pointer leaks
+into the sandbox that could break ASLR. RLBox mediates control flow through a
+combination of tainted types and API design. Tainting, for example, allows RLBox
+to prevent branching on tainted values that have not been validated. API design,
+on the other hand, is used to restrict control transfers between the renderer
+and sandbox. For instance, the renderer must use sandbox_invoke() to invoke
+functions in the sandbox; any callback into the renderer by the sandbox must
+first be registered by the renderer using the sandbox_callback(callback_fn) API.
 
-RLBox mediates control flow through a combination of tainted types and API
-design. Tainting, for example, allows RLBox to prevent branching on tainted
-values that have not been validated. API design, on the other hand, is used to
-restrict control transfers between the renderer and sandbox. For instance, the
-renderer must use sandbox_invoke() to invoke functions in the sandbox; any
-callback into the renderer by the sandbox must first be registered by the
-renderer using the sandbox_callback(callback_fn) API.
-
-As a result, RLBox enforces security through two approaches. First, it automates
+<!-- These mediation allows RLBox to enforce security through two approaches. First, it automates
 security checks such as bounds checking sandbox-supplied pointers to ensure they
 point within sandbox memory as well as the identifying of locations where
 tainted data must be validated. Second, RLBox uses compile-time type errors to
 guide the developer through the process of migrating a library into a sandbox.
 Each compile error points to the next required code change---e.g., data that
 needs to be validated before use, or control transfer code that needs to be
-changed to use RLBox APIs.
+changed to use RLBox APIs. -->
 
-For example, if we consider the two examples shown earlier, RLBox's compiler
-errors would require us to mark the parameters jd, and the jpeg data structure
-mInfo as tainted. After this, RLBox would be able to automate all checks in the
-first example, leaving the code as is. For the second example, above RLBox would
-use compiler errors to indicate that parameters to memmove must be sanitized
-before use as shown below.
+For example, if we consider the example shown earlier, RLBox's compiler errors
+would require us to mark the parameters jd, and the jpeg data structure mInfo as
+tainted. After this, RLBox would be able to automate insertion of several
+checks, such as the pointer bounds checks. RLBox then use compiler errors to
+indicate the need for some remaining checks; specifically that the parameters to
+memmove must be sanitized before use. We show the same example modified to use
+RLBox below.
 
-```c++
-void fill_input_buffer (rlbox_sandbox& sandbox, tainted<j_decompress_ptr> jd) {
-  tainted<jpeg_source_mgr*> src = jd->src;
-  ...
-  memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
-    src->next_input_byte.verify(...), src->bytes_in_buffer.verify(...));
-}
-```
+```cpp
+ 1: void fill_input_buffer (rlbox_sandbox& sandbox, tainted<j_decompress_ptr> jd) {
+ 2:   tainted<jpeg_source_mgr*> src = jd->src;
+ 3:   nsJPEGDecoder* decoder = jd->client_data.copy_and_verify(...);
+ 4:   ...
+ 5:   src->next_input_byte = new_buffer;
+ 6:   ...
+ 7:   if (/* buffer is too small */) {
+ 8:     JOCTET* buf = (JOCTET*) realloc(...);
+ 9:     if (!buf) {
+10:       decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
+11:       ...
+12:     }
+13:     ...
+14:   }
+15:   ...
+16:   memmove(decoder->mBackBuffer + decoder->mBackBufferLen,
+17:       src->next_input_byte.copy_and_verify(...),
+18:          src->bytes_in_buffer.copy_and_verify(...));
+19:   ...
+20: }
+````
 
 Note that it is still up to the user to figure out how to check the parameters
-to memove are safe---i.e. the user has to write safety checks in the two
-locations with "..." above. In this case, the following checks are required
+to memove are safe---i.e. the user has to write safety checks in the three calls
+to verify above. In this case, the following checks are required for the decoder.
+
+- The `decoder` being used is a valid object referring to one of the currently
+  active image decoders.
+- The decoder not being used by a concurrent thread (to prevent race conditions).
+
+To validate the parameters to `memmove`, the following checks must be performed
 
 - The field `next_input_byte` is a pointer within sandbox memory
-- The value of `next_input_byte _+ bytes_in_buffer` is also a pointer within
+- The value of `next_input_byte _+ bytes_in_buffer` is also a pointer
   sandbox memory
-- The value of `bytes_in_buffer` is would not overflow `mBackBufferLen`.
+- The value of `bytes_in_buffer` would not overflow the destination buffer.
 
-In practice, to simplify such code, RLBox also provides some overloads of
-standard APIs such as memcpy, strcpy and more that accept tainted values and
-automated these checks.
+<!-- Not leading with the below text for this fix as rlbox only allows
+memcpy(tainted dest, tainted src)
+OR
+memcpy(tainted dest, void* src)
+
+but not
+memcpy(void* dest, tainted src)
+
+as I think this may allow bad coding patterns which accidentally smuggles
+tainted data
+
+-->
+Additionally, to further simplify such code, RLBox also provides overloads of
+standard APIs such as memcpy, strcpy etc. that accept tainted values and can be
+used to automate such checks.
 
 ## Minimizing sandboxing engineering effort
 
