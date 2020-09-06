@@ -84,30 +84,29 @@ development could look like with broader first-class support for sandboxing.
 # The road to RLBox: library sandboxing in Firefox
 
 Firefox, like other browsers, relies on dozens of third-party libraries to
-decode audio, images, fonts, and other content. Since these libraries have been
+decode audio, images, fonts, and other content. These libraries have been
 a significant source of vulnerabilities in the browser (e.g., most of the
-browser bugs found by Sys this year were in third-party libraries
-[[**BSE20**][BSE20]]), by retrofitting Firefox to sandbox libraries we can
-minimize the damage due to library bugs (e.g., like the libvorbis bug at
-Pwn2Own 2018 to compromise Firefox).
+exploitable bugs found by recent work using symbolic execution were in
+third-party libraries [[**BSE20**][BSE20]]). By retrofitting Firefox to sandbox
+these libraries we can minimize the damage these vulnerabilities can inflict (e.g., like the
+libvorbis bug at Pwn2Own 2018 to compromise Firefox).
 
-We started this project roughly two years thinking the hardest part of
-sandboxing libraries is adopting a software-based isolation (SFI)
-toolkit---Google's NativeClient (NaCl) at the time---for library sandboxing .
-(NaCl is designed for sandboxing programs, not libraries.) This turned out be
-the easy part and, since then, WebAssembly toolkits---in particular, the Lucet
-WebAssembly compiler---has made this even easier (see
-[[**NGLSS19**][NGLSS19]]).
+When we began this project roughly two years ago, we thought the hardest part
+would be adapting Google's NativeClient (NaCl), a software-based isolation
+(SFI) toolkit, to sandbox libraries (NaCl is designed for sandboxing programs,
+not libraries.) This turned out be the easy part. Since then, WebAssembly
+toolkits---in particular the Lucet WebAssembly compiler---has made this even
+easier (see [[**NGLSS19**][NGLSS19]]).
 
-The hard part was the _last mile_, retrofitting Firefox to account for the
+In fact, the hardest part was the _last mile_, retrofitting Firefox to account for the
 now-untrusted libraries.  Firefox was written assuming libraries are trusted.
-To benefit from sandboxing, we had to change our threat model to assume
+To benefit from sandboxing, we had to change its threat model to assume
 libraries are untrusted, and modify the browser-library interface accordingly.
 In particular, we had to sanitize all data and regulate control flow between
-sandboxed libraries and the browser to prevent libraries from breaking out of
-their sandbox. Doing this manually was prone to error and onerous.
+sandboxed libraries and the browser to prevent malicious libraries from breaking out of
+their sandbox. Doing this manually was onerous and error prone.
 
-**Traps and pitfalls**
+**Sandboxing pitfalls**
 To illustrate the kinds of security challenges  we encountered, consider, for
 instance, refactoring the `fill_input_buffer` JPEG decoder function in Firefox.
 This function is called by the libjpeg library whenever it needs more bytes
@@ -166,18 +165,18 @@ to this model we made many mistakes---overlooking attack vectors and
 discovering many bugs only after building RLBox to help detect them.
 
 **Engineering effort**
-Even if we could somehow get all checks right, the upfront engineering effort
-of retrofitting the browser to sandbox any library as such is huge: We have to
+Even if we got all the checks right, the upfront engineering effort
+of modifying the browser to sandbox each library this way is huge: We have to
 retrofit all library calls, adjust data structures to account for machine model
 differences between the application and sandbox (a common issue with SFI
 toolchains), marshal data to and from the sandbox, etc. Only then can we run
 tests to ensure our retrofitting didn't break the browser.  Finally, since
 Firefox runs on many platforms---including platforms not yet supported by SFI
 toolkits like NaCl and Wasm---we have to do this alongside the existing code
-that used the library unsandboxed, using the C preprocessor to select between
+that use the library unsandboxed, using the C preprocessor to select between
 the old code and the new code. We tried this approach. But the patches become
-so complicated and unwieldy, we couldn't image anybody maintaining this code.
-We built RLBox and started anew.
+so complicated and unwieldy that we couldn't image anybody maintaining this code,
+so we built RLBox and started anew.
 
 # The RLBox framework
 
