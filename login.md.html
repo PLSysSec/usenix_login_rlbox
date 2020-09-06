@@ -59,11 +59,9 @@ efficient in-process isolation increasingly practical in a wide range of use
 cases.  But, to make library sandboxing a goto tool in more software
 engineering environments, the missing element has been a common framework that
 makes it easy to sandbox libraries (1) _securely_, to correctly enforce a
-secure interface between the untrusted library and the application, (2)
+secure interface between the untrusted library and the application, and (2)
 _effectively_, to minimize the engineering effort required to sandbox a
-library, and (3) _modularly_, to support different isolation techniques---from
-NaCl, to WebAssembly, and hardware isolation mechanisms like Intel's Memory
-Protection Key (MPK).
+library.
 
 Our own experience sandboxing libraries in Firefox reflects this. Our initial
 attempts to manually sandbox third party libraries were labor intensive, and
@@ -206,8 +204,6 @@ aribrarily; instead, the application must register callback functions using the
 They impose a strict tainted type discipline, requiring all return values of
 sandboxed functions and all callback arguments to be tainted.
 
-!!! TODO --- talk about other tainting use cases here
-
 This tained type-driven approach addresses the challenges we outlined above and
 our goal for modularity:
 
@@ -225,18 +221,17 @@ our goal for modularity:
   RLBox APIs.  This allows developers to incrementally port application code
   one line at a time, instead of wholesale.
 
-- **Modularity:** By forcing all control and data flow to go though explicit
-  APIs, RLBox automatically handles ABI differences in shared datastructures and
-  makes it easy for developers to switch the underlying isolation mechanisms.
-  This makes it easy to take advantage of new advances in isolation mechanisms:
-  The code interfacing with the library doesn't have to change across platforms
-  (e.g., on platform with MPK we can take advantage of the hardware isolation
-  mechanim, otherwise we can fall back to software, or even disable isolation
-  altogether).
+  By forcing all control and data flow to go though explicit APIs, RLBox
+  automatically handles ABI differences in shared datastructures and makes it
+  easy for developers to switch the underlying isolation mechanisms. This, in
+  turn, means that the the code interfacing with the library doesn't have to
+  change across platforms (e.g., on platform where NaCl or WebAssembly is not
+  supported developers can just use the null-sandbox as the underling
+  "isolation mechanim").
 
-We ellaborate on these next.
+We ellaborate on both below, and discuss new uses cases this framework enables.
 
-## Automating security checks to eliminate confused deputy attacks
+## Using tainted types for security
 
 For example, if we consider the example shown earlier, RLBox's compiler errors
 would require us to mark the parameters jd, and the jpeg data structure mInfo as
@@ -300,7 +295,7 @@ Additionally, to further simplify such code, RLBox also provides overloads of
 standard APIs such as memcpy, strcpy etc. that accept tainted values and can be
 used to automate such checks.
 
-## Minimizing sandboxing engineering effort
+## Using tainted types to minimize engineering effort
 
 While we have mostly focussed on the security features of RLBox so far, RLBox
 has several features designed to greatly reduce engineering effort -- this is
