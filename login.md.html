@@ -184,29 +184,26 @@ We built RLBox and started anew.
 
 RLBox is a C++ library designed to help developers retrofit application to
 securely use sandboxed libraries.  RLBox does this by making data and control
-flow at the application-sandbox interface explicit at the type level and by
+flow at the application-sandbox boundary explicit---at the type level--and by
 providing APIs to both mediate these flows and enforce security checks across
 the trust boundary.
 
-RLBox mediates data flow with _tainted_ types that impose a simple static
-information flow control (IFC) discipline.  This ensures that sandbox data is
-validated before any potentially unsafe use.
+RLBox mediates data flow using _tainted types_---type wrappers used to
+demarkcate data originating from the sandbox.  We use tainted values to ensure
+that application code cannot use sandboxed data unsafely.  For example, while
+application code can add two `tainted<int>` (to produce another
+`tainted<int>`), it cannot branch on such values or use them as indexes into an
+array. Instead, the application must validate before it can use it.
 
-RLBox mediates control flow through a combination of \tainted types and 
-API design.
-%
-Tainting, for example, allows RLBox to prevent branching on \tainted values that
-have not been validated.
-%
-API design, on the other hand, is used to restrict control transfers between
-the renderer and sandbox.
-%
-For instance, the renderer must 
-use \code{sandbox_invoke()} to invoke functions in the sandbox; any callback
-into the renderer by the sandbox must first be registered by the renderer using
-the \code{sandbox_callback(callback_fn)} API.
+RLBox mediates control flow by providing APIs for invoking sandboxed functions,
+registering host functions as callbacks---to allow the sandbox to call into the
+application---and more generally exchange data between the sandbox and
+application.  For example, application must use `sandbox_invoke(sbx_fn,
+args...)` to invoke functions in the sandbox; sandboxed functions cannot be
+called directly.  Similarly, sandboxed code cannot call into the application
+aribrarily; instead, the application must register callback functions using the
+`sandbox_callback(app_fn)` API.
 
-Mediating control and data flow allows \sys to:
 
 # Why we need a common sandboxing Framework
 
