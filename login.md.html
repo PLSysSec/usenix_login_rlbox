@@ -35,9 +35,10 @@ We believe that there is a practical path to improving software
 security.  You can take software modules, including third-party
 libraries, and _sandbox_ them to constrain what they can do---with low
 programmer effort, reasonable runtime overhead, and without wholesale
-rewriting or re-architecting.  The sandboxed module will still have
-bugs, but those bugs will not (in most cases; see below) create
-security vulnerabilities in the enclosing program.
+rewriting or re-architecting---without even creating new OS processes.
+The sandboxed module will still have bugs, but those bugs will not (in
+most cases; see below) create security vulnerabilities in the
+enclosing program.
 
 Consider an image decoding library like libpng.  With sandboxing, we
 can restrict this library so it has access to the image it decodes and
