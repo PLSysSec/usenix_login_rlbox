@@ -112,12 +112,13 @@ critical modules right.
 # The road to RLBox: library sandboxing in Firefox
 
 Firefox, like other browsers, relies on dozens of third-party libraries to
-decode audio, images, fonts, and other content. These libraries have been
-a significant source of vulnerabilities in the browser (e.g., most of the
+decode audio, images, fonts, and other content. These libraries have been a
+significant source of vulnerabilities in the browser (e.g., most of the
 exploitable bugs found by recent work using symbolic execution were in
-third-party libraries [[**BSE20**][BSE20]]). By retrofitting Firefox to sandbox
-these libraries we can minimize the damage these vulnerabilities can inflict (e.g., like the
-libvorbis bug at Pwn2Own 2018 to compromise Firefox).
+third-party libraries [[**BSE20**][BSE20]]).  With collaborators at Mozilla, we
+sought to minimize the damage due vulnerabilities in libraries (e.g., (e.g., a
+bugs in libvorbis was used to compromise Firefox at Pwn2Own 2018) by
+retrofitting Firefox to sandbox these libraries
 
 When we began this project roughly two years ago, we thought the hardest part
 would be adapting Google's Native Client (NaCl), a software-based isolation
@@ -140,8 +141,8 @@ To illustrate the kinds of security challenges  we encountered, consider, for
 instance, refactoring the `fill_input_buffer` JPEG decoder function in Firefox.
 This function is called by the libjpeg library whenever it needs more bytes
 from Firefox. Additionally, Firefox must save the currently unused input bytes
-held by libjpeg to an internal back buffer and resend this libjpeg along with
-additional input.
+held by libjpeg to an internal back buffer and resend this to libjpeg along
+with additional input.
 
 ```cpp
  1: void fill_input_buffer (j_decompress_ptr jd) {
@@ -185,26 +186,25 @@ now-untrusted library boundary. Among other things, we must:
   otherwise we have data race that result in a use-after-free vulnerability.
 
 Missing any of these checks---and these are only a subset of the kinds of
-checks we identified in [[**NDG+20**][NDG+20]]---allows a compromised library
-to carry out confused deputy attacks on Firefox.  Unfortunately, getting
+checks we identified in [[**NDG+20**][NDG+20]]---leaves Firefox vulnerable to
+confused deputy attacks.  Unfortunately, eliminating these attacks by getting
 all the right checks in all the right places for the hundreds of Firefox
 functions that interact with libjpeg is hard. Indeed, while migrating Firefox
-to this model we made many mistakes---overlooking attack vectors and
-discovering many bugs only after building RLBox to help detect them.
+to this model we repeatedly found that we had overlooked many checks.
 
 **Engineering effort**
-Even if we got all the checks right, the upfront engineering effort of
+But even if we got all the checks right, the upfront engineering effort of
 modifying the browser---or even smaller applications---to sandbox each library
 this way is huge: We have to retrofit all library calls, adjust data structures
 to account for machine model differences between the application and sandbox (a
 common issue with SFI toolchains), marshal data to and from the sandbox, etc.
-Only then can we run tests to ensure our retrofitting didn't break the browser.
-Finally, since Firefox runs on many platforms---including platforms not yet
-supported by SFI toolkits like NaCl and Wasm---we have to do this alongside the
-existing code that use the library unsandboxed, using the C preprocessor to
-select between the old code and the new code. We tried this approach. But the
-patches become so complicated and unwieldy that we couldn't image anybody
-maintaining this code, so we built RLBox and started anew.
+Only then can we run tests to ensure our retrofitting didn't break the
+application.  Finally, since Firefox runs on many platforms---including
+platforms not yet supported by SFI toolkits like NaCl and Wasm---we have to do
+this alongside the existing code that uses the library unsandboxed, using the C
+preprocessor to select between the old code and the new code. We tried this
+approach. But the patches become so complicated and unwieldy that we couldn't
+image anybody maintaining this code, so we built RLBox and started anew.
 
 # The RLBox framework
 
