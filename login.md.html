@@ -57,8 +57,9 @@ sandbox libraries, they become increasingly comfortable with and
 excited by the opportunities this offers.  For example, while the
 initial target of our sandboxing collaboration was a third-party
 font-shaping library, Graphite, now Firefox developers and security
-engineers are using RLBox for media decoding, spell checking, and even
-speech synthesis.
+engineers are using RLBox to sandbox both third-party libraries and
+legacy Mozilla code in domains including media decoding, spell
+checking, and even speech synthesis.
 
 We believe that the opportunities extend far beyond Firefox.  After
 all, secure messaging apps (e.g., Signal, WhatsApp, and iMessage),
@@ -83,14 +84,15 @@ to add code to manually check return values for consistency, but
 repeatedly found that we had missed cases and left open avenues for
 attack.
 
-Enter RLBox.  Using the C++ type system, RLBox automatically generates
-the boilerplate code required for sandbox interaction, and identifies
-_all_ places where the programmer will have to add data-checking code.
-With RLBox, programmers have a framework that makes it easy to sandbox
-libraries (1) _securely_, ensuring the interface between the untrusted
-library and the application code is correct, and with (2) _minimal
-engineering effort_, so that the cost of migrating libraries and
-applications to sandboxing is not prohibitive.  
+That's where RLBox comes in.  Using the C++ type system, RLBox
+automatically generates the boilerplate code required for sandbox
+interaction, and identifies _all_ places where the programmer will
+have to add data-checking code.  With RLBox, programmers have a
+framework that makes it easy to sandbox libraries (1) _securely_,
+ensuring the interface between the untrusted library and the
+application code is correct, and with (2) _minimal engineering
+effort_, so that the cost of migrating libraries and applications to
+sandboxing is not prohibitive.
 
 In the rest of this article we describe the experience that led to
 RLBox, how RLBox works and how it leverages the C++ type systems to
