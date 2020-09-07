@@ -228,14 +228,15 @@ application---and more generally exchange data between the sandbox and
 application.  For example, the application must use `sandbox_invoke(sbx_fn,
 args...)` to invoke functions in the sandbox; sandboxed functions cannot be
 called directly.  Similarly, sandboxed code cannot call into the application
-arbitrarily; instead, the application must register callback functions using the
-`sandbox_callback(app_fn)` API. These APIs are also key to data flow safety:
-They impose a strict tainted type discipline, requiring all return values of
-sandboxed functions and all callback arguments to be tainted.
+arbitrarily; instead, it can only call functions exposed by the application
+using the `sandbox_callback(app_fn)` API. These APIs don't just make the trust
+boundary explicitly, they are also key to data flow safety: They impose a
+strict tainted-type discipline on all functions by requiring all return values
+of sandboxed functions and all callback arguments to be tainted.
 
-This tainted type-driven approach addresses the challenges we outlined above:
+This tainted-type-driven approach addresses the challenges we outlined above:
 
-- **Security:** RLBox eliminates most traps and pitfalls by turning unsafe
+- **Security:** RLBox eliminates confused deputy attacks by turning unsafe
   control- and data-flows into type errors and, where possible, by performing
   automatic security checks.  Concretely, RLBox automatically sanitizes
   sandbox-supplied (tainted) pointers to ensure they point sandbox memory,
@@ -251,12 +252,11 @@ This tainted type-driven approach addresses the challenges we outlined above:
 
   By forcing all control and data flow to go though explicit APIs, RLBox
   automatically handles ABI differences in shared data structures and makes it
-  easy for developers to switch the underlying isolation mechanisms.
-  Importantly, this means that the code interfacing with the library doesn't
-  have to change---or be duplicated---across platforms (e.g., on platform where
-  NaCl or WebAssembly is not supported developers just need to change one line
-  to use the null-sandbox as the underling "isolation mechanism" instead of
-  NaCl or Wasm).
+  easy for developers to switch the underlying isolation mechanisms.  This
+  means that the code interfacing with the library doesn't have to change---or
+  be duplicated---across platforms (e.g., on platform where NaCl or WebAssembly
+  is not supported, developers just need to change one line to use the
+  null-sandbox as the underling "isolation mechanism" instead of NaCl or Wasm).
 
 We elaborate on both below, and discuss several scenarios, beyond sandboxing,
 where our framework can be useful.
