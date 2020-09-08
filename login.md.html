@@ -542,6 +542,14 @@ the application. However, since RLBox can automatically adjust for ABI
 differences, applications can straightforwardly use CHERI to secure parts of the
 application that are compatible with CHERI.
 
+
+XXX We should add something here about future architecture support for sandboxing.
+XXX Note limitations of CHERI (a big hammer for compartmentalization Hovav's IPSEC for
+XXX a VPN analogy is nice). Don't understand ERIM deeply enough to have a perspective but
+XXX it seems like there should be a pony in the space of better support for efficient
+XXX sandboxing--I imagine ERIM is limited in the number of concurrent compartments it can
+XXX support because MPK, blah, etc.
+
 # Making Sandboxing a First Class Part of the Developer Experience
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
