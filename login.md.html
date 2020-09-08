@@ -450,23 +450,20 @@ possible and have been explored for some of these domains. For example, trusted
 types in JavaScript to prevent XSS. Such techniques can also help mitigate SQL
 injection, unchecked printf format string vulnerabilities etc.
 
-# Bringing RLBox support to more platforms
+# Beyond RLBox
 
-We have thus far discussed RLBox in its current form---a framework written used
-by C++ programs to sandbox buggy libraries (typically written in C) by
-leveraging Wasm as a sandboxing mechanism. However, we believe the concepts
-behind RLBox are very general can be easily extended to other languages and
-platforms. In this section, we discuss the steps needed to bring RLBox to
-additional languages as well as how RLBox allows leveraging platform specific
-sandboxing mechanisms such as Intel MPK or CHERI to efficiently enforce
-isolation.
+We have thus far discussed RLBox in its current form---a framework that
+leverages the C++ type system, template metaprogramming, etc., to sandbox 
+libraries typically written in C, by leveraging Wasm as a sandboxing mechanism.
+In the future, we hope the RLBox approach will be supported in other languages,
+and that current and future processor support can bring greater efficiency and
+simplicity to in-process sandboxing.
 
 ## Supporting additional languages
 
-RLBox is currently implemented in C++ and relies on several C++ features to
-implement its security checks and automation. However, the underlying principles
-can be easily translated to other languages. To better understand how to bring
-RLBox to other languages, we first explain how RLBox uses various C++ features.
+RLBox is currently implemented in C++.  However, the approach
+can be directly translated to other languages. To understand how,
+we first explain how RLBox uses various C++ features.
 
 RLBox primarily relies on the use of tainted types (implemented via C++
 templates) and leverages compiler type checking to enforce security properties.
@@ -474,16 +471,16 @@ RLBox also permits safe operations on tainted types under certain constraints by
 taking advantage of operator overloading, and enforces constraints on these
 operations using C++ metaprogramming techniques.
 
-Many other languages include features which can be used to implement the same
-general RLBox principles. For instance, statically-typed languages typically
-offer some form of generics or templates that can be used to implement
-RLBox's tainted and tainted_volatile types. A notable exception here is
-C---supporting RLBox in C would require some tool for code generation.
-Similarly, many languages allow operator overloading, which RLBox uses to
-provide safe operations on tainted types while preserving the original syntax of
-the language. (For instance, in C++, RLBox allows dereferencing a tainted<int*>
-via the natural '->' and '*' operators, but with automatically inserted bounds
-checks.)
+For instance, statically-typed languages typically offer some form of generics
+or templates that can be used to implement RLBox's tainted and tainted_volatile
+types. 
+
+A notable exception here is C---supporting RLBox in C would require some tool
+for code generation.  Similarly, many languages allow operator overloading,
+which RLBox uses to provide safe operations on tainted types while preserving
+the original syntax of the language. (For instance, in C++, RLBox allows
+dereferencing a tainted<int*> via the natural '->' and '*' operators, but with
+automatically inserted bounds checks.)
 
 Frameworks like RLBox can also be used to enforce security in dynamically
 typed languages like JavaScript. However, without compiler assistance, RLBox
