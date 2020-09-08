@@ -328,61 +328,46 @@ used to automate such checks.
 ## Using tainted types to minimize engineering effort
 
 While we have mostly focussed on the security features of RLBox so far, RLBox
-has several features designed to greatly reduce engineering effort -- this is
-extremely important in practice. Without these features, modifying application
-code for correct and safe use sandboxed library can quickly become tedious and
-error-prone. We present just two of the main challenges below.
+has several features designed to greatly reduce engineering effort. Indeed
+without these features, modifying application code for correct and safe use
+sandboxed library can quickly become tedious and error-prone for a couple of
+reasons.
 
 First, SFI toolchains such as NaCl or Wasm have a different ABI than application
 code. Specifically, Wasm and NaCl use a 32-bit machine model (LP32) for
-performance i.e. the size of "long" and a "void*" in C code is 32-bits. Thus
-sharing data-structures between application code and libraries is not
-straightforward. Additionally, pointers in these toolchains use a different
-format---pointers are stored as relative offsets from the base of the sandbox
-heap for performance. Thus any datastructure that is exchanged between the
-application and library must account for size differences as well as convert or
-"swizzle" the pointer representations appropriately.
+performance i.e. the size of "long" and a "void*" in C code is 32-bits.
+Additionally, pointers in these toolchains use a different format---pointers are
+stored as relative offsets from the base of the sandbox heap for performance.
+Thus any datastructure that is exchanged between the application and library
+must account for size differences as well as convert or "swizzle" the pointer
+representations appropriately.
 
 Next, libraries are often tightly coupled to application code. For instance,
-when sandboxing the use of libjpeg in Firefox, we found that there are 25
-different API calls, 5 callbacks and many shared data structures between Firefox
-and libjpeg. However, sandboxing mechanisms often require code to use the
-sanctioned means of performing function calls and callbacks---the springboards
-and trampolines. We cannot reasonably expect application developers to migrate
-all interactions with sandboxed library to the trampolines and springboards in a
-single step.
+when sandboxing the use of libjpeg in Firefox, we found that there were several
+points of interaction between the Firefox and libpeg including 25 API calls, 5
+callbacks and many shared data structures. Sandboxing mechanisms often require
+code to use the sanctioned means of performing function calls and
+callbacks---the springboards and trampolines. We cannot reasonably expect
+application developers to migrate all interactions with sandboxed library to the
+trampolines and springboards in a single step.
 
 RLBox addresses both of these challenges through a combination of automation and
-compiler driven feedback. We discuss how RLBox addresses both of these
-challenges in more detail below.
+compiler driven feedback. We present how RLBox addresses these practical
+challenges below.
 
 ### Automatically bridging ABI incompatibilities
 
-RLBox automatically bridges ABI differences by leveraging the type system. In
-particular, RLBox uses two types---tainted<T> and tainted_volatile<T> to
-automate ABI conversions. The tainted type represents any numeric data
-influenced by the sandbox as well as pointers held by the application that refer
-to memory inside the sandbox; the tainted_volatile<T> type is used for any data
-stored in sandbox memory i.e. it can be directly modified by sandbox code. 
-We note that tainted_volatile<T>  is an internal detail of RLBox and is never
-exposed to users of RLBox.
-
-This simple division allows RLBox to automatically apply ABI conversions, adjust
-field offsets in structs, correct pointer arithmetic, swizzle pointers by
-leveraging the type of data being operated on. These types even automatically
-bounds check pointers appropriately as they are dereferenced. To demonstrate the
-benefits of this automation, we show how one line of code from the previous
-example must be changed to account for ABI differences, with and without RLBox.
-
-Consider the following line of code from the previous example of
-`fill_input_buffer`.
+RLBox automatically bridges ABI differences by leveraging the type system. To
+demonstrate the benefits of this automation, consider the following line of code
+from the previous example of `fill_input_buffer`.
 
 ```c++
+// mInfo is an object of type jpeg_decompress_struct
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
-If we were to port this line _without_ RLBox's automatic ABI conversions and
-security checks, the resulting code would look as follows.
+If we were to port this line _without_ RLBox's automation, the resulting code
+would look as follows.
 
 ```c++
 auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err");
@@ -394,10 +379,11 @@ auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
 *msg_field_swizzled = adjust_for_abi(JERR_OUT_OF_MEMORY);
 ```
 
-In contrast, RLBox lets you write the above exactly as it originally was
-written i.e.
+In contrast, RLBox allows this with almost no changes but marking `mInfo` as
+tainted i.e.
 
 ```c++
+// mInfo is an object of type tainted<jpeg_decompress_struct>
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
@@ -412,49 +398,41 @@ code.
 
 RLBox offers two important escape hatches.
 
-1) The UNSAFE_unverified API may be used on any tainted data to remove the
+1) **The UNSAFE_unverified API** may be used on any tainted data to remove the
    tainted wrapper. This allows the application code to disable tainting when
-   data must be passed to code that cannot handle tainted data. However, as the
-   API name indicates, the use of this API would not enforce the required
-   security checks, and is to be used only in the context of migrating code.
-   After migration is complete, calls to UNSAFE_unverified APIs must be removed
-   or replaced with validator functions that sanitize the given data.
+   data must be passed to code that cannot handle tainted data. Note that this
+   API would not enforce the required security checks, and thus is used only in
+   the context of migrating code. After migration is complete, calls to
+   UNSAFE_unverified APIs must be removed or replaced with validator functions
+   that sanitize the given data.
 
-2) The RLBox noop sandbox allows the application code to simply disable the
+2) **The RLBox noop sandbox** allows the application code to simply disable the
    underlying isolation mechanism. Instead, this option simply redirects
    function calls back to the application but wraps data as if it were received
-   from a sandboxed library. This allows us to test the data validation without
-   having to actually use a sandboxed library. Despite its simplicity, the noop
-   sandbox plays a very important role! Since, sandboxing mechanisms such as
-   WebAssembly have a different ABI, incremental porting cannot be supported as
-   automatic ABI conversions are not possible when escape hatches such as
-   UNSAFE_unverified were used. Instead during incremental migration, developers
-   must use the noop sandbox and switch to Wasm enforcement once this migration
-   is complete.
+   from a sandboxed library allowing developers to test data validation
+   separately.
 
-While RLBox's features were designed with the above use cases in mind, we also
-discovered several unexpected practical benefits as we incorporated this more
-in production code. We discuss these below.
+Developers use these two features to incrementally migrate application code to
+tainted types. Once complete, switching to Wasm based sandbox enforcement only
+requires changing a single line of code. We also discovered some unexpected
+practical benefits of this design as we incorporated this more in production
+code. We discuss these below.
 
 First the incremental porting greatly simplifies the code review process. For
 instance, we could commit and get reviews for partial migrations to the RLBox
-API, especially since the Firefox browser continued to build and run as before.
-Additionally, in the initial migration we simply omitted the validators for use
-of UNSAFE_unverified APIs. This allowed to test and deploy the partial migration
-on Firefox nightly builds. We then included the data validators in a separate
-code review with additional security reviews as part of this change.
+API, since the Firefox browser continued to build and run nightly builds as
+before. Additionally, we could explicitly include security reviews when writing
+the data validators for tainted data.
 
-Next we discovered that the noop sandbox is critical for downstream projects.
-When speaking with developers of the Tor browser, a downstream fork of the
-Firefox browser that allows anonymous browsing in the web, we found that Tor was
-open to sandbox more libraries than Firefox despite additional performance
-overhead due to their higher security requirements. However, the burden of
-maintaining a large fork of Firefox with sandboxed libraries was not an
-acceptable option. Instead, the RLBox API provides a simple option; Tor
-developers could migrate code to use the RLBox API and contribute this upstream
-using the noop sandbox---a change that has little to no overhead (< 1%). The
-downstream Tor configuration could however specify an isolation mechanism that
-provides enforcement.
+Next we discovered that the noop sandbox is very useful for downstream projects.
+When speaking with developers of the Tor browser, a downstream project of the
+Firefox browser for anonymous web browsing, we found that Tor was open to
+sandboxing more libraries than Firefox given the different security-performance
+tradeoffs for anonymous browsing. However, the burden of maintaining a large
+fork of Firefox with sandboxed libraries was not an acceptable option. Instead,
+we realized that any libraries sandboxed by Tor developers could be contribute
+upstream using the noop sandbox (a change that is less 1% overhead), while the
+Tor source would include the one line change specifying Wasm enforcement.
 
 ## Using tainted types outside of sandboxing
 
