@@ -328,26 +328,11 @@ Additionally, pointers in these toolchains use a different format---pointers are
 stored as relative offsets from the base of the sandbox heap for performance.
 Thus any datastructure that is exchanged between the application and library
 must account for size differences as well as convert or "swizzle" the pointer
-representations appropriately.
+representations appropriately. RLBox automatically bridges ABI differences by
+leveraging the type system.
 
-Next, libraries are often tightly coupled to application code. For instance,
-when sandboxing the use of libjpeg in Firefox, we found that there were several
-points of interaction between the Firefox and libpeg including 25 API calls, 5
-callbacks and many shared data structures. Sandboxing mechanisms often require
-code to use the sanctioned means of performing function calls and
-callbacks---the springboards and trampolines. We cannot reasonably expect
-application developers to migrate all interactions with sandboxed library to the
-trampolines and springboards in a single step.
-
-RLBox addresses both of these challenges through a combination of automation and
-compiler driven feedback. We present how RLBox addresses these practical
-challenges below.
-
-### Automatically bridging ABI incompatibilities
-
-RLBox automatically bridges ABI differences by leveraging the type system. To
-demonstrate the benefits of this automation, consider the following line of code
-from the previous example of `fill_input_buffer`.
+To demonstrate the benefits of this automation, consider the following line of
+code from the previous example of `fill_input_buffer`.
 
 ```c++
 // mInfo is an object of type jpeg_decompress_struct
@@ -375,16 +360,22 @@ tainted i.e.
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
-### Incremental migration
+The other major challenge is that libraries are often tightly coupled to
+application code; e.g. when sandboxing libjpeg use in Firefox, we found
+including 25 function calls to, and 5 callbacks from libjpeg. However,
+sandboxing mechanisms such as Wasm or NaCl require application code to use the
+sanctioned means of performing function calls and callbacks---the springboards
+and trampolines. We cannot reasonably expect application developers to migrate
+all these interactions with sandboxed library to the trampolines and
+springboards in a single step.
 
-RLBox allows us to migrate application code to use the RLBox API one line at a
-time. Between each change, the application can be compiled and run as before.
-While the details of our approach is explained in detail in our paper
-[[**NDG+20**][NDG+20]], the key parts of RLBox that allow for is the concept of
-escape hatches---techniques that let us disable RLBox's checks for a piece of
-code.
-
-RLBox offers two important escape hatches.
+To overcome this challenge, RLBox allows us to migrate application code to the
+RLBox API one line at a time, while RLBox internally invokes the springboards
+and trampolines as expected. Between each change, the application can be
+compiled and run as before. While the details of our approach is explained in
+detail in our paper [[**NDG+20**][NDG+20]], the key parts of RLBox that allow
+for is the concept of escape hatches---techniques that let us disable RLBox's
+checks for a piece of code. RLBox offers two such escape hatches.
 
 1) **The UNSAFE_unverified API** may be used on any tainted data to remove the
    tainted wrapper. This allows the application code to disable tainting when
