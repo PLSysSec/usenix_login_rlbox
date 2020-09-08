@@ -361,8 +361,8 @@ decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
 The other major challenge is that libraries are often tightly coupled to
-application code; e.g. when sandboxing libjpeg use in Firefox, we found
-including 25 function calls to, and 5 callbacks from libjpeg. However,
+application code; e.g., when sandboxing libjpeg in Firefox, we found
+25 function calls to libjpeg and 5 callbacks from libjpeg. However,
 sandboxing mechanisms such as Wasm or NaCl require application code to use the
 sanctioned means of performing function calls and callbacks---the springboards
 and trampolines. We cannot reasonably expect application developers to migrate
@@ -372,10 +372,10 @@ springboards in a single step.
 To overcome this challenge, RLBox allows us to migrate application code to the
 RLBox API one line at a time, while RLBox internally invokes the springboards
 and trampolines as expected. Between each change, the application can be
-compiled and run as before. While the details of our approach is explained in
-detail in our paper [[**NDG+20**][NDG+20]], the key parts of RLBox that allow
-for is the concept of escape hatches---techniques that let us disable RLBox's
-checks for a piece of code. RLBox offers two such escape hatches.
+compiled and run as before. While the details of our approach are explained
+in our paper [[**NDG+20**][NDG+20]], the key idea is that RLBox provides
+_escape hatches_ which let us disable RLBox's checks for a piece of code.
+In particular, RLBox provides two escape hatches:
 
 1) **The UNSAFE_unverified API** may be used on any tainted data to remove the
    tainted wrapper. This allows the application code to disable tainting when
@@ -388,28 +388,28 @@ checks for a piece of code. RLBox offers two such escape hatches.
 2) **The RLBox noop sandbox** allows the application code to simply disable the
    underlying isolation mechanism. Instead, this option simply redirects
    function calls back to the application but wraps data as if it were received
-   from a sandboxed library allowing developers to test data validation
-   separately.
+   from a sandboxed library. This allows developers to test data validation
+   separately from the actual isolation mechanism.
 
 Developers use these two features to incrementally migrate application code to
-tainted types. Once complete, switching to Wasm based sandbox enforcement only
+tainted types. Once complete, switching to Wasm-based sandbox enforcement only
 requires changing a single line of code. We also discovered some unexpected
 practical benefits of this design as we incorporated this more in production
 code. We discuss these below.
 
-First the incremental porting greatly simplifies the code review process. For
+First, the incremental porting greatly simplifies the code review process. For
 instance, we could commit and get reviews for partial migrations to the RLBox
 API, since the Firefox browser continued to build and run nightly builds as
 before. Additionally, we could explicitly include security reviews when writing
 the data validators for tainted data.
 
-Next we discovered that the noop sandbox is very useful for downstream projects.
+Next, we discovered that the noop sandbox is very useful for downstream projects.
 When speaking with developers of the Tor browser, a downstream project of the
 Firefox browser for anonymous web browsing, we found that Tor was open to
 sandboxing more libraries than Firefox given the different security-performance
 tradeoffs for anonymous browsing. However, the burden of maintaining a large
 fork of Firefox with sandboxed libraries was not an acceptable option. Instead,
-we realized that any libraries sandboxed by Tor developers could be contribute
+we realized that any libraries sandboxed by Tor developers could be contributed
 upstream using the noop sandbox (a change that is less 1% overhead), while the
 Tor source would include the one line change specifying Wasm enforcement.
 
