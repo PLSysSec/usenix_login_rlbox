@@ -619,11 +619,27 @@ sandboxing as an important tool for dependencies.
 
 # Conclusions
 
-!!! TODO --- WIP
+Decades of attempts to detect and mitigate software vulnerabilities have
+yielded lackluster results. Even browsers, some of the most heavily targeted
+and scrutinized software seem to provide an inexhaustible wellstream of
+expoitable vulnerabilities, with the promise of keeping researchers and
+attackers employed for at least the next decade.
 
+In-process sandboxing can offer developers and security engineers another
+choice---moving legacy, third party, or simply excess code out of their trusted
+computing base by sandboxing it---Thus, mitigating the impacts of a compromise.
+
+RLBox and WebAssembly offer developers of C++ applications a practical away to
+employ these techniques today. In the future, incremental improvements to
+standard libraries, tool chains, package managers, and even processor
+architectures can make this technique even more efficient, easy to use, and
+broadly avaiable.
+
+<!--
 - Library sandboxing can be a pratical thing in production systems, currently shipping in firefox
 - RLBox shows how to overcome security and software engineering challenges, similar ideas can be applied in other languages and security domains
 - First class support for this in other parts of the tool chain i.e. package manager can move us closer to world were sandboxed libraries not significantly harder to use than standard libraries.
+-->
 
 # References
 
