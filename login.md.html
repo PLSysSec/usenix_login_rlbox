@@ -514,12 +514,23 @@ allow RLBox to support this automatically.-->
 
 ## Leveraging advances in hardware isolation
 
-RLBox's design supports different isolation mechanisms, each offering different
-performance trade-offs[[**NDG+20**][NDG+20]]. At present, WebAssembly
-toolchains offers a practical immediately available, and relatively portable
-path to isolation. However, present and future hardware support for in-process
-isolation offers potential solutions that may considerably improve on the
-performance and complexity of WebAssembly.
+RLBox's design allows it to be largely independant of the isolation mechanism
+it employs. Today it supports software-based-fault isolation through
+WebAssembly, as well as traditional process based isolation
+[[**NDG+20**][NDG+20]]. Each of these options offers its own trade-offs.
+Process isolation is simple, but scales poorly as protection boundary crossing
+costs become prohibitive as the number of sandboxes exceed the number of
+available cores. WebAssembly offers low overhead protection boundary crossings,
+but imposes some additional CPU overhead on sandboxed code, in part due to the
+limitations of current toolchains, and in part due to its design.
+
+At present, WebAssembly toolchains offers a practical immediately available,
+and relatively portable path to isolation.  However, it pays a price for
+platform indepedence in complexity and performance that is not neccesary for
+in-process sandboxing. 
+
+However, present and future hardware support for in-process isolation may offer
+solutions that are simpler and more performant.
 
 The recent ERIM !!! ERIM !!! system, demonstrated how Intel's Memory Protection
 Key features (MPK) in conjunction binary inspection can support very low overhead
@@ -528,7 +539,6 @@ in-process isolation. XXX blah
 XXX This paragraph is not really addressing the main point we want to make,
 XXX the point is that CHERI can also support efficient compartmentalization,
 XXX the other point about supporting CHERI is interesting but tangential.
-
 
 Another interesting example is CHERI---an approach to supporting a capability
 based model for architectures such as ARM, RISC-V etc. Here, the hardware
