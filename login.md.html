@@ -514,17 +514,21 @@ allow RLBox to support this automatically.-->
 
 ## Leveraging advances in hardware isolation
 
-As discussed RLBox's design allows it to easily switch between different
-sandboxing mechanisms. We have explored several in [[**NDG+20**][NDG+20]].
-However, many more mechanisms exist each offering different
-performance/compatibility/security trade-offs. A particular area of interest is
-the growth in native hardware based support for sandboxing.
+RLBox's design supports different isolation mechanisms, each offering different
+performance trade-offs[[**NDG+20**][NDG+20]]. At present, WebAssembly
+toolchains offers a practical immediately available, and relatively portable
+path to isolation. However, present and future hardware support for in-process
+isolation offers potential solutions that may considerably improve on the
+performance and complexity of WebAssembly.
 
-For example, consider Intel's Memory Protection Key features (MPK). This allows
-very efficient sandboxing of components, and is largely compatible and easy to
-use with existing code as shown in !!! ERIM !!!. Due to RLBox, design, it would
-straightforward to implement RLBox support to use MPK as the isolation
-mechanism.
+The recent ERIM !!! ERIM !!! system, demonstrated how Intel's Memory Protection
+Key features (MPK) in conjunction binary inspection can support very low overhead
+in-process isolation. XXX blah
+
+XXX This paragraph is not really addressing the main point we want to make,
+XXX the point is that CHERI can also support efficient compartmentalization,
+XXX the other point about supporting CHERI is interesting but tangential.
+
 
 Another interesting example is CHERI---an approach to supporting a capability
 based model for architectures such as ARM, RISC-V etc. Here, the hardware
