@@ -453,13 +453,13 @@ injection, unchecked printf format string vulnerabilities etc.
 # Beyond RLBox
 
 We have thus far discussed RLBox in its current form---a framework that
-leverages the C++ type system, template metaprogramming, etc., to sandbox 
+leverages the C++ type system, template metaprogramming, etc., to sandbox
 libraries typically written in C, by leveraging Wasm as a sandboxing mechanism.
-In the future, we hope the RLBox approach will be supported in other languages,
-and that current and future processor support can bring greater efficiency and
-simplicity to in-process sandboxing.
+In the future, we hope to see RLBox like capabilities supported in other
+languages, and also that current and future processor features will further
+lower in-process sandboxing overheads.
 
-## Supporting additional languages
+## Beyond C++
 
 RLBox is currently implemented in C++.  However, the approach
 can be directly translated to other languages. To understand how,
