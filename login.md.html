@@ -210,13 +210,13 @@ image anybody maintaining this code, so we built RLBox and started anew.
 # The RLBox framework
 
 RLBox is a C++ library designed to make it easier for developers to retrofit
-application to securely use sandboxed libraries.  RLBox does this by making
+applications to securely use sandboxed libraries.  RLBox does this by making
 data and control flow at the application-sandbox boundary explicit---at the
 type level--and by providing APIs to both mediate these flows and enforce
 security checks across the trust boundary.
 
 RLBox mediates data flow using _tainted types_---type wrappers used to
-demarcate data originating from the sandbox.  We use tainted values to ensure
+demarcate data originating from the sandbox.  It uses tainted values to ensure
 that application code cannot use sandboxed data unsafely.  For example, while
 application code can add two `tainted<int>`s (to produce another
 `tainted<int>`), it cannot branch on such values or use them as indexes into an
@@ -225,13 +225,13 @@ them.
 
 RLBox mediates control flow by providing APIs for invoking sandboxed functions,
 registering host functions as callbacks---to allow the sandbox to call into the
-application---and more generally exchange data between the sandbox and
+application---and more generally exchanging data between the sandbox and
 application.  For example, the application must use `sandbox_invoke(sbx_fn,
 args...)` to invoke functions in the sandbox; sandboxed functions cannot be
 called directly.  Similarly, sandboxed code cannot call into the application
 arbitrarily; instead, it can only call functions exposed by the application
 using the `sandbox_callback(app_fn)` API. These APIs don't just make the trust
-boundary explicitly, they are also key to data flow safety: They impose a
+boundary explicit, they are also key to data flow safety: They impose a
 strict tainted-type discipline on all functions by requiring all return values
 of sandboxed functions and all callback arguments to be tainted.
 
@@ -243,7 +243,7 @@ and engineering challenges we outline above.
 RLBox eliminates confused deputy attacks by turning unsafe control- and
 data-flows into type errors and, where possible, by performing automatic
 security checks.  Concretely, RLBox automatically sanitizes sandbox-supplied
-(tainted) pointers to ensure they point sandbox memory, swizzles pointers that
+(tainted) pointers to ensure they point to sandbox memory, swizzles pointers that
 cross the trust boundary, and statically identifies locations where tainted
 data must be validated before use.
 
@@ -284,11 +284,11 @@ ensure that `decoder` points to a valid `nsJPEGDecoder` object not used by a
 concurrent thread, while on line 16 we ensure that copying `nr` bytes won't
 read past the `mBackBuffer` bounds.
 
-We must get validators right---a bug in a validator is typically a security
-bugs. In practice, though, validators are rare and short, typically only a few
+We must get validators right---a bug in a validator is often a security
+bug. In practice, though, validators are rare and short, typically only a few
 lines of code.  (**TODO: shr add stats from.**) Most importantly, by making
 these validators explicit, RLBox makes code reviews easier: security engineers
-only need to review these validators. 
+only need to review these validators.
 
 What's missing in this code snippet is almost as important: we don't write
 validators on lines 2, 5, and 10, for example. Instead, RLBox uses runtime
@@ -297,39 +297,20 @@ and `decoder->mInfo.err` pointers to point to sandbox memory.
 
 ## Using tainted types to minimize engineering effort
 
-Compile-time type errors guide the developer through the process of migrating a
-library into a sandbox. Each compile error points to the next required code
-change---e.g., data that needs to be validated before use, or control transfer
-code that needs to be changed to use the RLBox APIs.  This allows developers to
-incrementally port application code one line at a time and test it, in turn.
+In addition to helping developers avoid security pitfalls when using
+sandboxed libraries, RLBox also helps minimize the engineering effort
+necessary to retrofit applications to use sandboxed libraries.
 
-By forcing all control and data flow to go though explicit APIs, RLBox
-automatically handles ABI differences in shared data structures and makes it
-easy for developers to switch the underlying isolation mechanisms.  This
-means that the code interfacing with the library doesn't have to change---or
-be duplicated---across platforms (e.g., on platform where NaCl or WebAssembly
-is not supported, developers just need to change one line to use the
-null-sandbox as the underling "isolation mechanism" instead of NaCl or Wasm).
-
-!!! continue here
-
-
-
-While we have mostly focussed on the security features of RLBox so far, RLBox
-has several features designed to greatly reduce engineering effort. Indeed
-without these features, modifying application code for correct and safe use
-sandboxed library can quickly become tedious and error-prone for a couple of
-reasons.
-
-First, SFI toolchains such as NaCl or Wasm have a different ABI than application
-code. Specifically, Wasm and NaCl use a 32-bit machine model (LP32) for
-performance i.e. the size of "long" and a "void*" in C code is 32-bits.
-Additionally, pointers in these toolchains use a different format---pointers are
-stored as relative offsets from the base of the sandbox heap for performance.
-Thus any datastructure that is exchanged between the application and library
-must account for size differences as well as convert or "swizzle" the pointer
-representations appropriately. RLBox automatically bridges ABI differences by
-leveraging the type system.
+As one example, by forcing all control and data flow to go through explicit
+APIs, RLBox automatically handles ABI differences between sandbox and
+application code. SFI toolchains such as NaCl or Wasm use a 32-bit machine
+model (LP32) for performance---i.e., the size of "long" and "void*" in
+sandboxed C code is 32 bits. Additionally, pointers in these toolchains use a
+different format: Pointers are stored as relative offsets from the base of
+the sandbox heap. Thus any data structure that is exchanged between the
+application and library must account for size differences as well as convert
+or "swizzle" the pointer representations appropriately. RLBox automatically
+bridges ABI differences by leveraging the type system.
 
 To demonstrate the benefits of this automation, consider the following line of
 code from the previous example of `fill_input_buffer`.
@@ -352,52 +333,58 @@ auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
 *msg_field_swizzled = adjust_for_abi(JERR_OUT_OF_MEMORY);
 ```
 
-In contrast, RLBox allows this with almost no changes but marking `mInfo` as
-tainted i.e.
+In contrast, RLBox allows this with almost no changes other than marking
+`mInfo` as tainted:
 
 ```c++
 // mInfo is an object of type tainted<jpeg_decompress_struct>
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
-The other major challenge is that libraries are often tightly coupled to
-application code; e.g., when sandboxing libjpeg in Firefox, we found
-25 function calls to libjpeg and 5 callbacks from libjpeg. However,
-sandboxing mechanisms such as Wasm or NaCl require application code to use the
-sanctioned means of performing function calls and callbacks---the springboards
-and trampolines. We cannot reasonably expect application developers to migrate
-all these interactions with sandboxed library to the trampolines and
-springboards in a single step.
+Another way RLBox helps minimize engineering effort is by guiding the
+developer through the process of migrating a library into a sandbox.
+Libraries are often tightly coupled to application code; e.g., when
+sandboxing libjpeg in Firefox, we found 25 function calls to libjpeg and 5
+callbacks from libjpeg. However, sandboxing mechanisms such as Wasm or NaCl
+require application code to use the sanctioned means of performing function
+calls and callbacks---the springboards and trampolines. We cannot reasonably
+expect application developers to migrate all these interactions with
+sandboxed library to the trampolines and springboards in a single step.
 
-To overcome this challenge, RLBox allows us to migrate application code to the
-RLBox API one line at a time, while RLBox internally invokes the springboards
-and trampolines as expected. Between each change, the application can be
-compiled and run as before. While the details of our approach are explained
-in our paper [[**NDG+20**][NDG+20]], the key idea is that RLBox provides
-_escape hatches_ which let us disable RLBox's checks for a piece of code.
-In particular, RLBox provides two escape hatches:
+To overcome this challenge, RLBox allows us to migrate application code to
+the RLBox API one line at a time, while RLBox internally invokes the
+springboards and trampolines as expected. Meanwhile, RLBox's compile-time
+type errors guide the developer by pointing to the next required code
+change---e.g., data that needs to be validated before use, or control
+transfer code that needs to be changed to use the RLBox APIs. Between each
+change, the application can be compiled and run as before. While the details
+of our approach are explained in our paper [[**NDG+20**][NDG+20]], the key
+idea is that RLBox provides _escape hatches_ which let us disable RLBox's
+checks for a piece of code. In particular, RLBox provides two escape hatches:
 
 1) **The UNSAFE_unverified API** may be used on any tainted data to remove the
    tainted wrapper. This allows the application code to disable tainting when
-   data must be passed to code that cannot handle tainted data. Note that this
-   API would not enforce the required security checks, and thus is used only in
-   the context of migrating code. After migration is complete, calls to
-   UNSAFE_unverified APIs must be removed or replaced with validator functions
-   that sanitize the given data.
+   data must be passed to code that does not yet handle tainted data. Note that
+   this API would not enforce the required security checks, and thus is used
+   only in the context of migrating code. After migration is complete, calls
+   to UNSAFE_unverified APIs must be removed or replaced with validator
+   functions that sanitize the given data.
 
 2) **The RLBox noop sandbox** allows the application code to simply disable the
-   underlying isolation mechanism. Instead, this option simply redirects
-   function calls back to the application but wraps data as if it were received
-   from a sandboxed library. This allows developers to test data validation
-   separately from the actual isolation mechanism.
+   underlying isolation mechanism. Instead, this option redirects
+   function calls back to the application, while still wrapping data as if it
+   were received from a sandboxed library. This allows developers to test
+   data validation separately from the actual isolation mechanism.
 
-Developers use these two features to incrementally migrate application code to
-tainted types. Once complete, switching to Wasm-based sandbox enforcement only
-requires changing a single line of code. We also discovered some unexpected
-practical benefits of this design as we incorporated this more in production
-code. We discuss these below.
+Developers use these two features to incrementally migrate application code
+to tainted types. Once complete, switching to Wasm-based sandbox enforcement
+only requires changing a single line of code. This also means that the code
+interfacing with the library doesn't have to change---or be
+duplicated---across platforms (e.g., for platforms where NaCl or WebAssembly
+is not supported). We also discovered some unexpected practical benefits of
+this design as we incorporated RLBox into production code, as discussed next.
 
-First, the incremental porting greatly simplifies the code review process. For
+First, the incremental migration greatly simplifies the code review process. For
 instance, we could commit and get reviews for partial migrations to the RLBox
 API, since the Firefox browser continued to build and run nightly builds as
 before. Additionally, we could explicitly include security reviews when writing
