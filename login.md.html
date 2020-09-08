@@ -496,6 +496,18 @@ leverage contracts --- as recently proposed for C++, or for Wasm's interface
 types extended with data invariants --- to automatically validate tainted data
 prior to use.
 
+Rust is a particularly compelling language ecosystem for an approach like
+RLBox. Rust's raison d'être is safety, and it finds use
+in many settings where assurance is a paramount, thus the ability to more
+safely use native code fits in well with the overall Rust vision.
+
+At the language and tooling level, Rust is well suited to our approach.  Its
+support for generics and operator overloading via typeclasses naturally lends
+itself to our approach. It's rich macro system and affine types could also
+support features not possible in C++ RLBox; such as automatic struct support
+and time-of-check-time-of-use prevention.
+
+
 <!-- RLBox currently requires extra user specification (in the form of macros)
 to fully support structs. However, C++ metaclasses and reflection support will
 allow RLBox to support this automatically.-->
@@ -547,7 +559,7 @@ XXX it seems like there should be a pony in the space of better support for effi
 XXX sandboxing--I imagine ERIM is limited in the number of concurrent compartments it can
 XXX support because MPK, blah, etc.
 
-# Making Sandboxing a First Class Part of the Developer Experience
+# Bringing Sandboxing to the Developer Ecosystem
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
 point.  Our hope is that library sandboxing will become a first class activity
@@ -557,6 +569,7 @@ package managers. We believe in many cases such support could allow the use of
 sandboxed libraries with a level of ease comparable to the use of unsandboxed
 libraries today.
 
+## Package Managers
 Library sandboxing support in language module system or package manager could
 allow users to seamlessly choose to sandbox libraries when importing
 dependencies.  
@@ -576,7 +589,7 @@ placing trust in the author of the validators, because they are a relatively
 small amount of code, auditing them could be quite tractable.
 
 
-!!! TODO --- Clarify (and or remove) the typescript thing.
+!!! TODO --- Clarify (and or remove) the typescript thing, or drop it
 
 Language tooling could automatically adjust its build system to appropriately
 switch to a sandboxing compiler for libraries which the user wants to sandbox.
@@ -585,6 +598,14 @@ for each library's interface, using a system similar to what we see today for
 TypeScript. In short, first-class support for RLBox could make sandboxing even
 more seamless for users, resulting in greater security in the greater software
 ecosystem.
+
+In Rust presence of a powerful common build systems and package manager i.e. Cargo,
+also lends itself smooth support for library sandboxing.  Extending Cargo with
+an additional flag in the Cargo.toml file, to to indicate when a dependency
+should be sandboxed could be quite straightforward.
+
+
+## FFIs and Native Code
 
 All mainstream programming languages support a foreign function interface (FFI)
 to invoke function in libraries written in other languages, particularly C, and
@@ -596,35 +617,6 @@ interfaces, which has been explored in multiple research projects,
 could not only benefit assurance, but also provide significant
 benefits for debugging as native code that violates invariants of the language
 runtime lead to notoriously difficult bugs.
-
-Rust is a particularly compelling language ecosystem for an approach like
-RLBox. Rust's raison d'être is safety, and it finds use
-in many settings where assurance is a paramount, thus the ability to more
-safely use native code fits in well with the overall Rust vision.
-
-At the language and tooling level, Rust is well suited to our approach.  Its
-support for generics and operator overloading via typeclasses naturally lends
-itself to our approach. It's rich macro system and affine types could also
-support features not possible in C++ RLBox; such as automatic struct support
-and time-of-check-time-of-use prevention.
-
-!!! TODO --- struct support is not explained
-
-The presence of a powerful common build systems and package manager i.e. Cargo,
-also lends itself smooth support for library sandboxing.  Extending Cargo with
-an additional flag in the Cargo.toml file, to to indicate when a dependency
-should be sandboxed could be quite straightforward.
-
-!!! TODO --- some text about syntax being better
-<!--
-, and automatically augment function return values with
-tainted types could be quite natural. 
-
-Of course developers would still responsible for modifying their code to add
-validators where needed, however this would encourage developers to consider
-sandboxing as an important tool for dependencies.
-
--->
 
 # Conclusions
 
