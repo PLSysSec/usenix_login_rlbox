@@ -550,27 +550,37 @@ sandboxed libraries with a level of ease comparable to the use of unsandboxed
 libraries today.
 
 ## Package Managers
-Library sandboxing support in language module system or package manager could
-allow users to seamlessly choose to sandbox libraries when importing
-dependencies.  
 
-Packages could make explicit as part of their specification what
-privileges they need to carry out their task, and developers could then choose
-if and how to grant these privileges as part of importing a package.
+In the ecology of package ecosystems there is constant competition between
+package authors provide the best package for a given task. Security is among
+the ways that package authors can differentiate their package from others. We
+have seen this clearly in the Rust ecosystem, where the presence (or absence)
+of unsafe code is one way that packages are compared.
 
+Sandboxing is another way that package authors can provided differentiated
+value, by integrating sandboxing support into their library.  This could look
+like authors distibuting their packages with OS level sandboxing policies,
+allowing developers could then choose if and how to grant these privileges as
+part of importing a package.
+
+Much of the work of writing validators for tainted types could also be
+mitigated by distributing validators as part of a sandboxed library. While this
+would entail placing trust in the author of the validators, because they are a
+relatively small amount of code, auditing them could be quite tractable.
+
+Supporting capabilities like this as a first class part of package managers
+could allow developers to choose wether or not to use a sandboxed version
+of a library with minimal additional fanfare.
+
+
+<!--
+!!! TODO --- Clarify (and or remove) the typescript thing, or drop it
 Integrated support for applying tainted types to values produced by sandboxed
 libraries could facilitate safe library use, and a natural syntax for invoking
 sandboxed functions ala. RLBox could make the transition to using sandboxed
 versions of libraries natural and seamless.
 
-Much of the work of writing validators for tainted types could be mitigated by
-distributed validators as part of a sandboxed library. While this would entail
-placing trust in the author of the validators, because they are a relatively
-small amount of code, auditing them could be quite tractable.
-
-
-!!! TODO --- Clarify (and or remove) the typescript thing, or drop it
-
+M
 Language tooling could automatically adjust its build system to appropriately
 switch to a sandboxing compiler for libraries which the user wants to sandbox.
 The language could potentially even automatically pull in contract definitions
@@ -583,20 +593,23 @@ In Rust presence of a powerful common build systems and package manager i.e. Car
 also lends itself smooth support for library sandboxing.  Extending Cargo with
 an additional flag in the Cargo.toml file, to to indicate when a dependency
 should be sandboxed could be quite straightforward.
-
+-->
 
 ## FFIs and Native Code
 
-All mainstream programming languages support a foreign function interface (FFI)
-to invoke function in libraries written in other languages, particularly C, and
-many popular languages such as Python, Ruby, and Javascript (ala Node.js) make
-extensive use or native code in their standard libraries and package
-ecosystems. First class support for sandboxing native code as part of FFI
-interfaces, which has been explored in multiple research projects,
-!!! TODO --- cite{robusta, sandcrust} probably some more stuff --- node, other langs}.
-could not only benefit assurance, but also provide significant
-benefits for debugging as native code that violates invariants of the language
-runtime lead to notoriously difficult bugs.
+Many popular safe languages such as Python, Ruby, and Javascript (ala Node.js)
+make extensive use of unsafe code (most commonly C), in their standard
+libraries and package ecosystems through the use of a Foreign Function
+Interface (FFI).  
+
+Providing first class support for sandboxing native code is a very natural way
+to extend FFI interfaces !!! TODO --- cite{robusta, sandcrust} !!! and
+interface generation tools, and bring library sandboxing into a language
+toolchain.
+
+Sandboxing unsafe code not only benefits assurance, but can also provide
+significant benefits for debugging. Unsafe code that violates invariants of the
+language runtime has a long history of generating notoriously difficult bugs.
 
 # Conclusions
 
