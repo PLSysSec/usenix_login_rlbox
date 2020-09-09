@@ -298,19 +298,13 @@ In addition to helping developers avoid security pitfalls when using
 sandboxed libraries, RLBox also helps minimize the engineering effort
 necessary to retrofit applications to use sandboxed libraries.
 
-As one example, by forcing all control and data flow to go through explicit
-APIs, RLBox automatically handles ABI differences between sandbox and
-application code. SFI toolchains such as NaCl or Wasm use a 32-bit machine
-model (LP32) for performance---i.e., the size of "long" and "void*" in
-sandboxed C code is 32 bits. Additionally, pointers in these toolchains use a
-different format: Pointers are stored as relative offsets from the base of
-the sandbox heap. Thus any data structure that is exchanged between the
-application and library must account for size differences as well as convert
-or "swizzle" the pointer representations appropriately. RLBox automatically
-bridges ABI differences by leveraging the type system.
-
-To demonstrate the benefits of this automation, consider the following line of
-code from the previous example of `fill_input_buffer`.
+As one example, RLBox automatically handles the machine-model differences
+between sandbox and application code by forcing all control and data flow to
+go through explicit APIs and explicit types. For instance, RLBox
+automatically swizzles pointers, and accounts for the difference in the size
+of "long" and "void*" in sandboxed vs. unsandboxed C code. To demonstrate the
+benefits of this automation, consider the following line of code from the
+previous example of `fill_input_buffer`.
 
 ```c++
 // mInfo is an object of type jpeg_decompress_struct
@@ -345,7 +339,7 @@ sandboxing libjpeg in Firefox, we found 25 function calls to libjpeg and 5
 callbacks from libjpeg. However, sandboxing mechanisms such as Wasm or NaCl
 require application code to use the sanctioned means of performing function
 calls and callbacks---the springboards and trampolines. We cannot reasonably
-expect application developers to migrate all these interactions with
+expect application developers to migrate all these interactions with a
 sandboxed library to the trampolines and springboards in a single step.
 
 To overcome this challenge, RLBox allows us to migrate application code to
@@ -379,23 +373,24 @@ only requires changing a single line of code. This also means that the code
 interfacing with the library doesn't have to change---or be
 duplicated---across platforms (e.g., for platforms where NaCl or WebAssembly
 is not supported). We also discovered some unexpected practical benefits of
-this design as we incorporated RLBox into production code, as discussed next.
+this design as we incorporated RLBox into production code:
 
-First, the incremental migration greatly simplifies the code review process. For
-instance, we could commit and get reviews for partial migrations to the RLBox
-API, since the Firefox browser continued to build and run nightly builds as
-before. Additionally, we could explicitly include security reviews when writing
-the data validators for tainted data.
+First, the incremental migration greatly simplifies the code review process.
+We could commit and get reviews for partial migrations to the RLBox API,
+since the Firefox browser continued to build and run nightly builds as
+before. Additionally, we could explicitly include security reviews when
+writing the data validators for tainted data.
 
-Next, we discovered that the noop sandbox is very useful for downstream projects.
-When speaking with developers of the Tor browser, a downstream project of the
-Firefox browser for anonymous web browsing, we found that Tor was open to
-sandboxing more libraries than Firefox given the different security-performance
-tradeoffs for anonymous browsing. However, the burden of maintaining a large
-fork of Firefox with sandboxed libraries was not an acceptable option. Instead,
-we realized that any libraries sandboxed by Tor developers could be contributed
-upstream using the noop sandbox (a change that is less 1% overhead), while the
-Tor source would include the one line change specifying Wasm enforcement.
+And second, we discovered that the noop sandbox is very useful for downstream
+projects. When speaking with developers of the Tor browser, a downstream
+project of the Firefox browser for anonymous web browsing, we found that Tor
+was open to sandboxing more libraries than Firefox given the different
+security-performance tradeoffs for anonymous browsing. However, the burden of
+maintaining a large fork of Firefox with sandboxed libraries was not an
+acceptable option. Instead, we realized that any libraries sandboxed by Tor
+developers could be contributed upstream using the noop sandbox (a change
+that is less 1% overhead), while the Tor source would include the one line
+change specifying Wasm enforcement.
 
 ## Using tainted types outside of sandboxing
 
@@ -405,27 +400,27 @@ and untrusted code, disaggregating highly intertwined components, or bridging
 ABI incompatibilities. We briefly discuss some additional potential uses of
 RLBox's techniques.
 
-*TEE runtimes:* Applications running on trusted execution environments (TEEs)
+**TEE runtimes:** Applications running on trusted execution environments (TEEs)
 such as Intel SGX must frequently interface with untrusted code; even code
 from the host OS is considered untrusted in this context. When reviewing the
 code of multiple TEE runtimes, Van Bulck et al. !!!cite{two-worlds-sgx}!!!
 discovered that almost all frameworks have bugs pertaining to use of
 unchecked data---bugs that RLBox would prevent by construction.
 
-*OS kernels:* Operating system kernel code frequently handles userspace pointers,
+**OS kernels:** Operating system kernel code frequently handles userspace pointers,
 but must be careful to never dereference them before checking. RLBox could be used
 to automatically insert these checks prior to dereference.  In fact, prior
 work !!!cite{cqual-kernel-ptr}!!! extended the compiler support for C's
 attributes to achieve the same effect as having a wrapped type.
 
-*Browser IPC layers:* Modern browsers employ multiple processes to reduce their
+**Browser IPC layers:** Modern browsers employ multiple processes to reduce their
 security surface and to employ features such as site-isolation. This
 architecture means that data often has to be transferred back and forth
 between various processes, some of which are potentially compromised. RLBox's
 tainted types could prevent the misuse of unchecked data and offer lazy
 marshalling of data, improving both security and performance.
 
-*Handling untrusted user input:* More generally, there are large classes of
+**Handling untrusted user input:** More generally, there are large classes of
 vulnerabilities that stem from the use of unsanitized data: for instance,
 XSS, SQL injection, and printf format-string vulnerabilities. RLBox could be
 used to help eliminate these kinds of vulnerabilities: it provides a general
