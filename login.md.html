@@ -439,65 +439,61 @@ injection, unchecked printf format string vulnerabilities etc.
 
 # Beyond RLBox
 
-We have thus far discussed RLBox in its current form---a framework that
-leverages the C++ type system, template metaprogramming, etc., to sandbox
-libraries typically written in C, by leveraging Wasm as a sandboxing mechanism.
-In the future, we hope to see RLBox like capabilities supported in other
-languages, and also that current and future processor features will further
-lower in-process sandboxing overheads.
+We have thus far discussed RLBox in its current form---a framework that uses
+the C++ type system, template metaprogramming, and  SFI toolkits like
+WebAssembly to securely sandbox libraries typically written in C.  In the
+future, we hope to see extensions to other languages, support for sandboxing
+libraries written in arbitrary languages, and the adoption of processor
+features that can further lower in-process sandboxing overheads.
 
 ## Beyond C++
 
-RLBox is currently implemented in C++.  However, the approach
-can be directly translated to other languages. To understand how,
-we first explain how RLBox uses various C++ features.
+We implemented RLBox in C++ because Firefox is predominately written in C++.
+To extend RLBox to other languages, we need to understand how to implement
+RLBox's tainted type system.
 
-RLBox primarily relies on the use of tainted types (implemented via C++
-templates) and leverages compiler type checking to enforce security properties.
-RLBox also permits safe operations on tainted types under certain constraints by
-taking advantage of operator overloading, and enforces constraints on these
-operations using C++ metaprogramming techniques.
+<!-- **Tainted types in C++** -->
+RLBox relies on several C++ features to implement tainted types.  Most notably,
+RLBox uses C++ templates to implement the generic `tainted<T>` type, and takes
+advantage of C++'s function and operator overloading to make most of the
+tainted type interface transparent.  For example, RLBox overloads pointer
+dereferencing---the `->` and `*` operators---to allow dereferencing
+`tainted<T*>` values safely, i.e., by automatically sanitizing the underlying
+pointer to point to sandbox memory (line 10 in the `fill_input_buffer` example
+above).  We further rely on template metaprogramming to enforce a custom type
+discipline in C++ directly.
 
-For instance, statically-typed languages typically offer some form of generics
-or templates that can be used to implement RLBox's tainted and tainted_volatile
-types. 
-
-A notable exception here is C---supporting RLBox in C would require some tool
-for code generation.  Similarly, many languages allow operator overloading,
-which RLBox uses to provide safe operations on tainted types while preserving
-the original syntax of the language. (For instance, in C++, RLBox allows
-dereferencing a tainted<int*> via the natural '->' and '*' operators, but with
-automatically inserted bounds checks.)
-
-Frameworks like RLBox can also be used to enforce security in dynamically
-typed languages like JavaScript. However, without compiler assistance, RLBox
-cannot provide helpful compile-time assistance, with errors instead manifesting
-as runtime errors. While this affects some of the usability of RLBox, we can
-still enforce strong security guarantees equivalent to those in C++.
-
-This is just the beginning! We envision a future where RLBox could leverage
-many additional language features as well. For instance, RLBox could take
-advantage of Rust's affine types to automatically prevent
-time-of-check-time-of-use attacks and double fetch attacks. RLBox could also
-leverage contracts --- as recently proposed for C++, or for Wasm's interface
-types extended with data invariants --- to automatically validate tainted data
-prior to use.
+**Statically-typed languages**
+Other statically-typed languages typically also offer some form of generics or templates
+that can be used to implement tainted types.  Many also allow function and
+operator overloading which, like C++, allows us to provide safe operations
+on tainted types while preserving the original syntax of the language.
 
 Rust is a particularly compelling language ecosystem for an approach like
-RLBox. Rust's raison d'être is safety, and it finds use
-in many settings where assurance is a paramount, thus the ability to more
-safely use native code fits in well with the overall Rust vision.
+RLBox. First, Rust's raison d'être is safety---indeed, the language is used in
+many settings where assurance is a paramount---and RLBox can compliment this
+effort by, for example, making it easy for Rust programmers to safely integrate
+C/C++ code into their projects.  Second, tainted types can be implemented
+naturally using Rust's macro system, and support for generics and operator
+overloading (via traits). Finally, Rust's affine types can even simplify
+certain validators by for example, making it easy to automatically prevent
+time-of-check-time-of-use and double fetch attacks.
 
-At the language and tooling level, Rust is well suited to our approach.  Its
-support for generics and operator overloading via typeclasses naturally lends
-itself to our approach. It's rich macro system and affine types could also
-support features not possible in C++ RLBox; such as automatic struct support
-and time-of-check-time-of-use prevention.
+**Dynamically-typed languages**
+Dynamically-typed languages like JavaScript and Python can enforce tainted
+types dynamically.  This, of course, makes the incremental porting longer since 
+type errors manifest at runtime. Luckily, many of these languages have typed
+extensions to precisely address this limitations (e.g., TypeScript and Flow
+extend JavaScript with types).
 
-
-<!-- RLBox currently requires extra user specification (in the form of macros)
-to fully support structs. However, C++ metaclasses and reflection support will
-allow RLBox to support this automatically.-->
+**Compiler plugins and toolkits**
+For languages not flexible enough to implement the RLBox static tainted type
+system, we envision extending the tooling instead. For example, for C, we can
+implement RLBox as Clang plugin (to both enforce the type system and to
+generate runtime checks). Alternatively, we can implement tainted types as part
+of interface description languages (IDL) compilers.  As mentioned above the
+Mozilla security team, for example, integrating tainted types into the IPDL
+inter-process communication protocol IDL [[**R20**][R20]].
 
 ## Leveraging advances in hardware isolation
 
@@ -643,6 +639,9 @@ engineers.
 
 [**NGLSS19**] S. Narayan, T. Garfinkel, S. Lerner, H. Shacham, and D. Stefan.  "[Gobi: WebAssembly as a Practical Path to Library Sandboxing][NGLSS19]".  arXiv:1912.02285, Dec. 2019.
 [NGLSS19]: https://arxiv.org/abs/1912.02285
+
+[**R20**] Tom Ritter. Support tainting data received from IPC. Bug 1610005.
+[R20]: https://bugzilla.mozilla.org/show_bug.cgi?id=1610005
 
 # Authors
 
