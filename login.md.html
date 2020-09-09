@@ -559,18 +559,17 @@ of unsafe code is one way that packages are compared.
 
 Sandboxing is another way that package authors can provided differentiated
 value, by integrating sandboxing support into their library.  This could look
-like authors distibuting their packages with OS level sandboxing policies,
-allowing developers could then choose if and how to grant these privileges as
-part of importing a package.
+like authors distibuting their packages with most or all of the work required
+to sandbox that package done upfront by the package author.  Developers could
+then choose wether or not enable sandboxing with minimal additional fanfare.
 
-Much of the work of writing validators for tainted types could also be
-mitigated by distributing validators as part of a sandboxed library. While this
-would entail placing trust in the author of the validators, because they are a
-relatively small amount of code, auditing them could be quite tractable.
-
-Supporting capabilities like this as a first class part of package managers
-could allow developers to choose wether or not to use a sandboxed version
-of a library with minimal additional fanfare.
+To enable this, the package author could specify an system level sandboxing
+policy, (e.g. granting access to the file system or network), and developers
+could then choose if and how to grant these privileges when importing a
+package.  Much of the work of writing validators for tainted types could also
+be mitigated by distributing validators as part of a sandboxed library. While
+this would entail placing trust in the author of the validators, because they
+are a relatively small amount of code, auditing them could be quite tractable.
 
 
 <!--
