@@ -399,40 +399,40 @@ Tor source would include the one line change specifying Wasm enforcement.
 
 ## Using tainted types outside of sandboxing
 
-Although the focus of RLBox is sandboxing, the techniques used by RLBox tackle
-many general problems such as securing interactions between trusted and
-untrusted code, disaggregating highly intertwined components, bridging ABI
-incompatibilities etc. Thus, before we discuss the future for RLBox sandboxing,
-we briefly discuss some additional uses of RLBox's techniques.
+Although the focus of RLBox is sandboxing, the techniques used by RLBox
+tackle more general problems, such as securing interactions between trusted
+and untrusted code, disaggregating highly intertwined components, or bridging
+ABI incompatibilities. We briefly discuss some additional potential uses of
+RLBox's techniques.
 
-TEE runtimes: Applications running on the trusted execution environments such as
-Intel SGX must frequently interface with untrusted code; indeed code from the
-host OS is also considered untrusted in this context. When reviewing the code of
-multiple TEE runtimes, Van Bulck et al.!!!\cite{two-worlds-sgx}!!! discovered
-that almost all frameworks have bugs pertaining to use of unchecked data---bugs
-that RLBox would prevent by construction. Furthermore, we believe that RLBox may
-need little to no modification for use to mitigate such problems in TEE
-runtimes.
+*TEE runtimes:* Applications running on trusted execution environments (TEEs)
+such as Intel SGX must frequently interface with untrusted code; even code
+from the host OS is considered untrusted in this context. When reviewing the
+code of multiple TEE runtimes, Van Bulck et al. !!!cite{two-worlds-sgx}!!!
+discovered that almost all frameworks have bugs pertaining to use of
+unchecked data---bugs that RLBox would prevent by construction.
 
-OS kernels: Operating system kernel code frequently handles userspace pointers,
-but must be careful to never dereference them before checking. In fact, prior
-work !!!cite{cqual-kernel-ptr}!!! has extended compiler support for C's
-attributes to achieve the same affect of having a wrapped type.
+*OS kernels:* Operating system kernel code frequently handles userspace pointers,
+but must be careful to never dereference them before checking. RLBox could be used
+to automatically insert these checks prior to dereference.  In fact, prior
+work !!!cite{cqual-kernel-ptr}!!! extended the compiler support for C's
+attributes to achieve the same effect as having a wrapped type.
 
-Browser IPC layers: Modern browsers employ multiple processes to reduce their
+*Browser IPC layers:* Modern browsers employ multiple processes to reduce their
 security surface and to employ features such as site-isolation. This
-architecture means that data often has to be transferred back and forth between
-various processes, some of which are potentially compromised. Like in RLBox, use
-of tainted types here would preventing misuse of unchecked data and offer lazy
+architecture means that data often has to be transferred back and forth
+between various processes, some of which are potentially compromised. RLBox's
+tainted types could prevent the misuse of unchecked data and offer lazy
 marshalling of data, improving both security and performance.
 
-Handling untrusted user inputs: More generally, there are large classes of
-vulnerabilities that stem from use of unsanitized data. RLBox addresses this
-challenge in the context of sandboxing with tainted types and required
-validators before data use. Similar solutions employing wrapper types are
-possible and have been explored for some of these domains. For example, trusted
-types in JavaScript to prevent XSS. Such techniques can also help mitigate SQL
-injection, unchecked printf format string vulnerabilities etc.
+*Handling untrusted user input:* More generally, there are large classes of
+vulnerabilities that stem from the use of unsanitized data: for instance,
+XSS, SQL injection, and printf format-string vulnerabilities. RLBox could be
+used to help eliminate these kinds of vulnerabilities: it provides a general
+framework for safely handling unsanitized data by using tainted types and
+requiring validators before data use. Indeed, similar solutions employing
+wrapper types have been explored in some of these domains; for example,
+trusted types in JavaScript prevent XSS.
 
 # Beyond RLBox
 
