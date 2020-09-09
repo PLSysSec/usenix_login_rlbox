@@ -116,7 +116,7 @@ decode audio, images, fonts, and other content. These libraries have been a
 significant source of vulnerabilities in the browser (e.g., most of the
 exploitable bugs found by recent work using symbolic execution were in
 third-party libraries [[**BSE20**][BSE20]]).  With collaborators at Mozilla, we
-sought to minimize the damage due vulnerabilities in libraries (e.g., (e.g., a
+sought to minimize the damage due vulnerabilities in libraries (e.g., a
 bugs in libvorbis was used to compromise Firefox at Pwn2Own 2018) by
 retrofitting Firefox to sandbox these libraries
 
@@ -129,20 +129,19 @@ easier (see [[**NGLSS19**][NGLSS19]]).
 
 In fact, the hardest part was the _last mile_, retrofitting Firefox to account
 for the now-untrusted libraries.  Firefox was written assuming libraries are
-trusted.  To benefit from sandboxing, we had to change its threat model to
-assume libraries are untrusted, and modify the browser-library interface
-accordingly.  In particular, we had to sanitize all data and regulate control
-flow between sandboxed libraries and the browser to prevent malicious libraries
-from breaking out of their sandbox. Doing this manually was onerous and error
-prone.
+trusted.  To add sandboxing, we had to change its threat model to assume
+sandboxed libraries are untrusted, and harden the browser-library interface.
+Hardening this interface in-turn required sanitizing data and regulating control flow
+between sandboxed libraries and the browser. Thus, ensuring that malicious
+libraries could not break out of their sandbox.
 
 **Sandboxing pitfalls**
-To illustrate the kinds of security challenges  we encountered, consider, for
-instance, refactoring the `fill_input_buffer` JPEG decoder function in Firefox.
-This function is called by the libjpeg library whenever it needs more bytes
-from Firefox. Additionally, Firefox must save the currently unused input bytes
-held by libjpeg to an internal back buffer and resend this to libjpeg along
-with additional input.
+Hardening the library/application interface manually is labor intensive and
+error prone. To illustrate some of the challenges, lets consider updating the
+`fill_input_buffer` JPEG decoder function. Libjpeg calls this function whenever
+it needs more bytes from Firefox. As seen on line 16, Firefox also saves
+the unused input bytes held by libjpeg to an internal back buffer, which it
+sends to libjpeg along with the new input bytes.
 
 ```cpp
  1: void fill_input_buffer (j_decompress_ptr jd) {
@@ -166,8 +165,7 @@ with additional input.
 19: }
 ````
 
-When sandboxing libjpeg, we need to refactor this code to account for the
-now-untrusted library boundary. Among other things, we must:
+When sandboxing libjpeg, we need to make the following changes: 
 
 - Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
   arbitrary-read gadget.
@@ -184,28 +182,27 @@ now-untrusted library boundary. Among other things, we must:
   the pointers to account for the potentially different machine model of the
   sandbox. Both NaCl and WebAssembly have different pointer representations.
 - Ensure that multiple threads can't invoke the callback on the same image,
-  otherwise we have data race that result in a use-after-free vulnerability.
+  otherwise we have data race that results in a use-after-free vulnerability.
 
-Missing any of these checks---and these are only a subset of the kinds of
-checks we identified in [[**NDG+20**][NDG+20]]---leaves Firefox vulnerable to
-confused deputy attacks.  Unfortunately, eliminating these attacks by getting
-all the right checks in all the right places for the hundreds of Firefox
-functions that interact with libjpeg is hard. Indeed, while migrating Firefox
-to this model we repeatedly found that we had overlooked many checks.
+Missing any of these checks---and these are only a limited sample of the kind
+of checks required[[**NDG+20**][NDG+20]]---would leave Firefox vulnerable to
+confused deputy attacks.  Adding the right checks to the hundreds of Firefox
+functions that interact with libjpeg was great deal of tedious work, further,
+we repeatedly found many checks that we had overlooked.
 
 **Engineering effort**
-But even if we got all the checks right, the upfront engineering effort of
-modifying the browser---or even smaller applications---to sandbox each library
-this way is huge: We have to retrofit all library calls, adjust data structures
-to account for machine model differences between the application and sandbox (a
-common issue with SFI toolchains), marshal data to and from the sandbox, etc.
-Only then can we run tests to ensure our retrofitting didn't break the
-application.  Finally, since Firefox runs on many platforms---including
-platforms not yet supported by SFI toolkits like NaCl and Wasm---we have to do
-this alongside the existing code that uses the library unsandboxed, using the C
-preprocessor to select between the old code and the new code. We tried this
-approach. But the patches become so complicated and unwieldy that we couldn't
-image anybody maintaining this code, so we built RLBox and started anew.
+The upfront engineering effort of modifying the browser this way was huge,
+beyond adding security checks we have to: retrofit all library calls, adjust
+data structures to account for machine model differences between the
+application and sandbox (a common issue with SFI toolchains), marshal data to
+and from the sandbox, etc.  Only then could we run tests to ensure our
+retrofitting didn't break the application.  Finally, since Firefox runs on many
+platforms---including platforms not yet supported by SFI toolkits like NaCl and
+Wasm---we had to do this alongside the existing code that uses the library
+unsandboxed, using the C preprocessor to select between the old code and the
+new code. The patches to do all this became so complicated and unwieldy that we
+couldn't image anybody maintaining our code, so we abandoned this manual
+approach, built RLBox, and started anew.
 
 # The RLBox framework
 
