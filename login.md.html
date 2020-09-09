@@ -16,7 +16,7 @@ bugs to use for exploiting your software and targeting your users.
 
 The problem is especially acute with third-party open source
 libraries.  You might care about one thing the library does, but you
-ship the whole library, and bugs in any part of it can create to
+ship the whole library, and bugs in any part of it can create
 security problems in your product.  (Unless you fork the library to
 remove the extraneous code, but who wants to maintain a fork forever?)
 Worse, hackers who find a bug in a popular library can try to deploy
@@ -95,7 +95,7 @@ effort_, so that the cost of migrating libraries and applications to
 sandboxing is not prohibitive.
 
 In the rest of this article we describe the experience that led to
-RLBox, how RLBox works and how it leverages the C++ type systems to
+RLBox, how RLBox works and how it leverages the C++ type system to
 make sandboxing practical, and how our type-driven approach can be
 used in other domains (e.g., trusted execution environments).  Then we
 outline how this approach can translate to languages other than C/C++.
@@ -116,15 +116,15 @@ decode audio, images, fonts, and other content. These libraries have been a
 significant source of vulnerabilities in the browser (e.g., most of the
 exploitable bugs found by recent work using symbolic execution were in
 third-party libraries [[**BSE20**][BSE20]]).  With collaborators at Mozilla, we
-sought to minimize the damage due vulnerabilities in libraries (e.g., a
+sought to minimize the damage due to vulnerabilities in libraries (e.g., a
 bug in libvorbis was used to compromise Firefox at Pwn2Own 2018) by
-retrofitting Firefox to sandbox these libraries
+retrofitting Firefox to sandbox these libraries.
 
-When we began this project roughly two years ago, we thought the hardest part
+When we began this project roughly three years ago, we thought the hardest part
 would be adapting Google's Native Client (NaCl), a software-based isolation
 (SFI) toolkit, to sandbox libraries. (NaCl is designed for sandboxing programs,
-not libraries.) This turned out be the easy part. Since then, WebAssembly
-toolkits---in particular the Lucet WebAssembly compiler---has made this even
+not libraries.) This turned out to be the easy part. Since then, WebAssembly
+toolkits---in particular the Lucet WebAssembly compiler---have made this even
 easier (see [[**NGLSS19**][NGLSS19]]).
 
 In fact, the hardest part was the _last mile_, retrofitting Firefox to account
@@ -137,7 +137,7 @@ libraries could not break out of their sandbox.
 
 **Sandboxing pitfalls**
 Hardening the library/application interface manually is labor intensive and
-error prone. To illustrate some of the challenges, lets consider updating the
+error prone. To illustrate some of the challenges, let's consider updating the
 `fill_input_buffer` JPEG decoder function. Libjpeg calls this function whenever
 it needs more bytes from Firefox. As seen on line 16, Firefox also saves
 the unused input bytes held by libjpeg to an internal back buffer, which it
@@ -165,7 +165,7 @@ sends to libjpeg along with the new input bytes.
 19: }
 ````
 
-When sandboxing libjpeg, we need to make the following changes: 
+When sandboxing libjpeg, we need to make the following changes:
 
 - Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
   arbitrary-read gadget.
@@ -185,14 +185,14 @@ When sandboxing libjpeg, we need to make the following changes:
   otherwise we have data race that results in a use-after-free vulnerability.
 
 Missing any of these checks---and these are only a limited sample of the kind
-of checks required[[**NDG+20**][NDG+20]]---would leave Firefox vulnerable to
+of checks required [[**NDG+20**][NDG+20]]---would leave Firefox vulnerable to
 confused deputy attacks.  Adding the right checks to the hundreds of Firefox
-functions that interact with libjpeg was great deal of tedious work, further,
+functions that interact with libjpeg was great deal of tedious work; further,
 we repeatedly found many checks that we had overlooked.
 
 **Engineering effort**
-The upfront engineering effort of modifying the browser this way was huge,
-beyond adding security checks we have to: retrofit all library calls, adjust
+The upfront engineering effort of modifying the browser this way was huge.
+Beyond adding security checks we had to retrofit all library calls, adjust
 data structures to account for machine model differences between the
 application and sandbox (a common issue with SFI toolchains), marshal data to
 and from the sandbox, etc.  Only then could we run tests to ensure our
@@ -201,7 +201,7 @@ platforms---including platforms not yet supported by SFI toolkits like NaCl and
 Wasm---we had to do this alongside the existing code that uses the library
 unsandboxed, using the C preprocessor to select between the old code and the
 new code. The patches to do all this became so complicated and unwieldy that we
-couldn't image anybody maintaining our code, so we abandoned this manual
+couldn't imagine anybody maintaining our code, so we abandoned this manual
 approach, built RLBox, and started anew.
 
 # The RLBox framework
