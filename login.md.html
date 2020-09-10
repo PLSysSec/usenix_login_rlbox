@@ -403,14 +403,14 @@ RLBox's techniques.
 **TEE runtimes:** Applications running on trusted execution environments (TEEs)
 such as Intel SGX must frequently interface with untrusted code; even code
 from the host OS is considered untrusted in this context. When reviewing the
-code of multiple TEE runtimes, Van Bulck et al. !!!cite{two-worlds-sgx}!!!
+code of multiple TEE runtimes, Van Bulck et al. [[**BOM+19**][BOM+19]]
 discovered that almost all frameworks have bugs pertaining to use of
 unchecked data---bugs that RLBox would prevent by construction.
 
 **OS kernels:** Operating system kernel code frequently handles userspace pointers,
 but must be careful to never dereference them before checking. RLBox could be used
 to automatically insert these checks prior to dereference.  In fact, prior
-work !!!cite{cqual-kernel-ptr}!!! extended the compiler support for C's
+work [[**JW04**][JW04]] extended the compiler support for C's
 attributes to achieve the same effect as having a wrapped type.
 
 **Browser IPC layers:** Modern browsers employ multiple processes to reduce their
@@ -649,6 +649,12 @@ engineers.
 
 [**NGLSS19**] S. Narayan, T. Garfinkel, S. Lerner, H. Shacham, and D. Stefan.  "[Gobi: WebAssembly as a Practical Path to Library Sandboxing][NGLSS19]".  arXiv:1912.02285, Dec. 2019.
 [NGLSS19]: https://arxiv.org/abs/1912.02285
+
+[**BOM+19**] J. Van Bulck, D. Oswald, E. Marin, A. Aldoseri, F. D. Garcia, and F. Piessens. "[A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes][BOM+19]". In _2019 ACM SIGSAC Conference on Computer and Communications Security (CCS '19)_. ACM, Nov. 2019.
+[BOM+19]: https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf
+
+[**JW04**] R. Johnson and D. Wagner. "[Finding User/Kernel Pointer Bugs With Type Inference][JW04]". In _Proceedings of USENIX Security 2004_. USENIX, Aug. 2004.
+[JW04]: https://www.usenix.org/event/sec04/tech/full_papers/johnson/johnson_html/
 
 [**R20**] Tom Ritter. Support tainting data received from IPC. Bug 1610005.
 [R20]: https://bugzilla.mozilla.org/show_bug.cgi?id=1610005
