@@ -123,8 +123,8 @@ retrofitting Firefox to sandbox these libraries.
 When we began this project roughly two years ago, we thought the hardest part
 would be adapting Google's Native Client (NaCl), a software-based isolation
 (SFI) toolkit, to sandbox libraries. (NaCl is designed for sandboxing programs,
-not libraries.) This turned out to be the easy part. Since then, WebAssembly
-toolkits---in particular the Lucet WebAssembly compiler---have made this even
+not libraries.) This turned out to be the easy part. Since then, WebAssembly (Wasm)
+toolkits---in particular the Lucet Wasm compiler---have made this even
 easier (see [[**NGLSS19**][NGLSS19]]).
 
 In fact, the hardest part was the _last mile_, retrofitting Firefox to account
@@ -180,7 +180,7 @@ When sandboxing libjpeg, we need to make the following changes:
   the destination address to `memmove()` on line 16. **TODO: shr, this seems wrong**
 - Swizzle pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate
   the pointers to account for the potentially different machine model of the
-  sandbox. Both NaCl and WebAssembly have different pointer representations.
+  sandbox. Both NaCl and Wasm have different pointer representations.
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that results in a use-after-free vulnerability.
 
@@ -371,7 +371,7 @@ Developers use these two features to incrementally migrate application code
 to tainted types. Once complete, switching to Wasm-based sandbox enforcement
 only requires changing a single line of code. This also means that the code
 interfacing with the library doesn't have to change---or be
-duplicated---across platforms (e.g., for platforms where NaCl or WebAssembly
+duplicated---across platforms (e.g., for platforms where NaCl or Wasm
 is not supported). We also discovered some unexpected practical benefits of
 this design as we incorporated RLBox into production code:
 
@@ -433,7 +433,7 @@ trusted types in JavaScript prevent XSS.
 
 We have thus far discussed RLBox in its current form---a framework that uses
 the C++ type system, template metaprogramming, and  SFI toolkits like
-WebAssembly to securely sandbox libraries typically written in C.  In the
+Wasm to securely sandbox libraries typically written in C.  In the
 future, we hope to see extensions to other languages, support for sandboxing
 libraries written in arbitrary languages, and the adoption of processor
 features that can further lower in-process sandboxing overheads.
@@ -495,52 +495,36 @@ protocol IDL [[**R20**][R20]].
 
 ## Beyond software-based isolation
 
-RLBox's design allows it to be largely independant of the isolation mechanism
-it employs. Today it supports software-based-fault isolation through
-WebAssembly, as well as traditional process based isolation
-[[**NDG+20**][NDG+20]]. Each of these options offers its own trade-offs.
-Process isolation is simple, but scales poorly as protection boundary crossing
-costs become prohibitive as the number of sandboxes exceed the number of
-available cores. WebAssembly offers low overhead protection boundary crossings,
-but imposes some additional CPU overhead on sandboxed code, in part due to the
-limitations of current toolchains, and in part due to its design.
+We designed RLBox to be make it easy for developers plug-in different isolation
+mechanism. This makes it easy to migrate code (e.g., by using the noop
+sandbox), as we describe above. It also allows developers to use different
+isolation mechanisms that have different trade-offs.  For example, while in
+production we use WebAssembly for isolation, in [[**NDG+20**][NDG+20]] we
+evaluate two other isolation mechanisms: Wasm's predecessor, NaCl, and
+traditional process based isolation.  These isolation mechanisms have different
+trade-offs.  Process isolation is simple, but scales poorly---protection
+boundary crossing costs become prohibitive as the number of sandboxes exceed
+the number of available cores.  Wasm and NaCl, on the other hand, scale to
+large number of sandboxes and have cheap boundary crossings, but impose an
+overhead on the sandboxed code.
 
-At present, WebAssembly toolchains offers a practical and portable path to
-isolation.  However, it pays a price for platform indepedence in complexity and
-performance that is not neccesary for in-process sandboxing. 
+At present, Wasm toolchains offers a practical and portable path to isolation.
+But this software-based isolation approach will inevitably be slower than
+running native code.
 
-Present and future hardware support for in-process isolation can offer
-solutions that are simpler and more performant.
+Hardware support for in-process isolation can offer solutions that are simple
+and more performant. Today, for example, Intel's Memory Protection Key features
+(MPK), when used for in-process isolation [[**VED+19**][VED+19]] incurs roughly
+1% overhead when used for in-process isolation (but doesn't scale beyond 16
+sandboxes).  Looking further out, the CHERI capability-based system will
+similarly make in-process isolation---and, memory safety more generally---cheap
+on Arm processors [[**R19**][R19]]. By making it easy to use these features
+transparently (e.g., for CHERI it can automatically adjust for ABI differences
+introduced by capabilities), RLBox could lower the barrier to adopting new
+hardware in-process features---and, we hope, this will encourage new hardware
+design for in-process isolation.
 
-The recent ERIM !!! ERIM !!! system, demonstrated how Intel's Memory Protection
-Key features (MPK) in conjunction binary inspection can support very low overhead
-in-process isolation. XXX blah
-
-XXX This paragraph is not really addressing the main point we want to make,
-XXX the point is that CHERI can also support efficient compartmentalization,
-XXX the other point about supporting CHERI is interesting but tangential.
-
-Another interesting example is CHERI---an approach to supporting a capability
-based model for architectures such as ARM, RISC-V etc. Here, the hardware
-enforcement would include and apply bounds checks for all pointers and pointer
-dereferences. However, this feature does expand the size of pointers, so it may
-not be easy to deploy for all applications especially if the increased pointer
-size introduces incompatibilities. Furthermore, it would not be easy to apply
-CHERI to just the portion of the code that is compatible; this would make any
-data-structures from this portion of code have a different ABI with the rest of
-the application. However, since RLBox can automatically adjust for ABI
-differences, applications can straightforwardly use CHERI to secure parts of the
-application that are compatible with CHERI.
-
-
-XXX We should add something here about future architecture support for sandboxing.
-XXX Note limitations of CHERI (a big hammer for compartmentalization Hovav's IPSEC for
-XXX a VPN analogy is nice). Don't understand ERIM deeply enough to have a perspective but
-XXX it seems like there should be a pony in the space of better support for efficient
-XXX sandboxing--I imagine ERIM is limited in the number of concurrent compartments it can
-XXX support because MPK, blah, etc.
-
-# Bringing Sandboxing to the Developer Ecosystem
+## Bringing sandboxing to the developer ecosystem
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
 point.  Our hope is that library sandboxing will become a first class activity
@@ -550,7 +534,7 @@ package managers. We believe in many cases such support could allow the use of
 sandboxed libraries with a level of ease comparable to the use of unsandboxed
 libraries today.
 
-## Package Managers
+## Package managers
 
 In the ecology of package ecosystems there is constant competition between
 package authors provide the best package for a given task. Security is among
@@ -595,7 +579,7 @@ an additional flag in the Cargo.toml file, to to indicate when a dependency
 should be sandboxed could be quite straightforward.
 -->
 
-## FFIs and Native Code
+## FFIs and native code
 
 Many popular safe languages such as Python, Ruby, and Javascript (ala Node.js)
 make extensive use of unsafe code (most commonly C), in their standard
@@ -641,6 +625,8 @@ engineers.
 
 # References
 
+**TODO: sort these**
+
 [**NDG+20**] S. Narayan, C. Disselkoen, T. Garfinkel, N. Froyd, E. Rahm, S. Lerner, H. Shacham, and D. Stefan. "[Retrofitting Fine Grain Isolation in the Firefox Renderer][NDG+20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
 [NDG+20]: https://www.usenix.org/conference/usenixsecurity20/presentation/narayan
 
@@ -656,8 +642,14 @@ engineers.
 [**JW04**] R. Johnson and D. Wagner. "[Finding User/Kernel Pointer Bugs With Type Inference][JW04]". In _Proceedings of USENIX Security 2004_. USENIX, Aug. 2004.
 [JW04]: https://www.usenix.org/event/sec04/tech/full_papers/johnson/johnson_html/
 
-[**R20**] Tom Ritter. Support tainting data received from IPC. Bug 1610005.
+[**R19**] Richard Grisenthwaite. "[A Safer Digital Future, By Design][R19]". arm Blueprint. Oct. 2019.
+[R19]: https://www.arm.com/blogs/blueprint/digital-security-by-design
+
+[**R20**] Tom Ritter. "[Support tainting data received from IPC][R20]". Mozilla Bug 1610005. Jan. 2020.
 [R20]: https://bugzilla.mozilla.org/show_bug.cgi?id=1610005
+
+[**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2004.
+[VED+19]: https://www.usenix.org/conference/usenixsecurity19/presentation/vahldiek-oberwagner
 
 # Authors
 
