@@ -144,13 +144,15 @@ Hardening this interface in-turn required sanitizing data and regulating control
 between sandboxed libraries and the browser. Thus, ensuring that malicious
 libraries could not break out of their sandbox.
 
+Our first attempt at sandboxing libraries in Firefox involved manually
+hardening the library/application interface---this did not go well.
+
 **Security Challenges**
-Hardening the library/application interface manually is labor intensive and
-error prone. To illustrate some of the challenges, let's consider updating the
-`fill_input_buffer` JPEG decoder function. Libjpeg calls this function whenever
-it needs more bytes from Firefox. As seen on line 16, Firefox also saves
-the unused input bytes held by libjpeg to an internal back buffer, which it
-sends to libjpeg along with the new input bytes.
+To see how things can go wrong, let's consider
+updating the `fill_input_buffer` JPEG decoder function. Libjpeg calls this
+function whenever it needs more bytes from Firefox. As seen on line 16, Firefox
+also saves the unused input bytes held by libjpeg to an internal back buffer,
+which it sends to libjpeg along with the new input bytes.
 
 ```c++
  1: void fill_input_buffer (j_decompress_ptr jd) {
@@ -174,7 +176,7 @@ sends to libjpeg along with the new input bytes.
 19: }
 ````
 
-When sandboxing libjpeg, we need to make the following changes:
+When sandboxing libjpeg, we needed to make the following changes:
 
 - Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
   arbitrary-read gadget.
@@ -193,16 +195,16 @@ When sandboxing libjpeg, we need to make the following changes:
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that results in a use-after-free vulnerability.
 
-Missing any of these checks---and these are only a limited sample of the kind
-of checks required [[**NDG+20**][NDG+20]]---would leave Firefox vulnerable to
-confused deputy attacks.  Adding the right checks to the hundreds of Firefox
-functions that interact with libjpeg was great deal of tedious work; further,
-we repeatedly found many checks that we had overlooked.
+If we missed any of these checks---and these are only a limited sample of the kind
+of checks required [[**NDG+20**][NDG+20]]---an attacker could potential bypass
+our sandbox through a confused deputy attack.  Further, not only was adding the
+right checks to the hundreds of Firefox functions that interact with libjpeg
+tedious, but we frequently found checks that we had overlooked.
 
 **Engineering effort**
 The upfront engineering effort of modifying the browser this way was huge.
-Beyond adding security checks we had to retrofit all library calls, adjust
-data structures to account for machine model differences between the
+Beyond adding security checks, we also had to retrofit all library calls, adjust
+data structures to account for machine model (ABI) differences between the
 application and sandbox (a common issue with SFI toolchains), marshal data to
 and from the sandbox, etc.  Only then could we run tests to ensure our
 retrofitting didn't break the application.  Finally, since Firefox runs on many
