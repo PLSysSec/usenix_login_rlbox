@@ -2,6 +2,15 @@
 
 -- Title: The Road to Less Trusted Code: Lowering the Barrier to In-process Sandboxing
 
+# Abstract
+
+Firefox currently ships with a variety of third-party and in-house libraries
+running sandboxed, in-process, using a framework called RLBox. We explore how
+RLBox uses the C++ type system to simplify retrofitting sandboxing in existing
+code bases, and consider how better tooling and architecture support can enable
+a future where library sandboxing is normal part of how we secure applications.
+
+
 # Introduction
 
 Users expect featureful software, and features, it hardly needs
