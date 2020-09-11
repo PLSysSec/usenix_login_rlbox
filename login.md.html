@@ -393,7 +393,7 @@ developers could be contributed upstream using the noop sandbox (a change
 that is less 1% overhead), while the Tor source would include the one line
 change specifying Wasm enforcement.
 
-## Using tainted types outside of sandboxing
+## Using tainted types outside of library sandboxing
 
 The security challenges we face when sandboxing libraries are not unique to
 library sandboxing. Developers have to handle untrusted data and control flow
@@ -407,42 +407,37 @@ And, unsurprisingly, TEE runtime libraries don't: Van Bulck et al.
 [[**BOM+19**][BOM+19]], for example, found that most frameworks, across several
 TEEs, were vulnerable to bugs RLBox addresses by construction.
 
-**OS kernels:** Operating System kernels handle untrusted data from user space.
-Bugfinding tools---from MECA at the start of the century [[**YKXE03**][YKXE03]]
-to Sys this year [[**BSE20**][BSE20]]---have found vulnerabilities in kernels
-due to unchecked (or improperly checked) user space data (notably, pointers).
-Frameworks like RLBox could automatically identify where user space data needs
-to be checked and even perform certain checks automatically (e.g., much like we
-ensure that sandbox pointers point to sandbox memory, we can ensure that user
-space pointers point to user space memory).  Indeed, Johnson and Wagner's
-bugfinding tool [[**JW04**][JW04]] even used type inference to such find kernel
-bugs.
+**OS kernels:** Operating systems kernels handle untrusted data from user
+space.  Bugfinding tools---from MECA at the start of the century
+[[**YKXE03**][YKXE03]] to Sys this year [[**BSE20**][BSE20]]---have found many
+vulnerabilities in kernels due to unchecked (or improperly checked) user space
+data (notably, pointers).  Frameworks like RLBox could automatically identify
+where user space data needs to be checked and even perform certain checks
+automatically (e.g., much like we ensure that sandbox pointers point to sandbox
+memory, we can ensure that user space pointers point to user space memory).
+Indeed, Johnson and Wagner's bugfinding tool [[**JW04**][JW04]] even used type
+inference to find such kernel bugs.
 
 
-**Browser IPC layers:**
+**Browser IPC layers:** Modern browser architectures privilege separate
+different parts of the browser into sandboxed processes. Almost all separate
+the _renderer_ parts---the portion of the browser that handles untrusted user
+content from HTML parsing, to JavaScript execution, to image decoding and
+rendering---from the _chrome_ parts---the trusted portion of the browser that
+can access the file system, network, etc.----and restrict communication to a
+well-typed inter-process communication (IPC) layer. Like OS kernels, the
+browser chrome must validate all values coming from untrusted renderer
+processes; like kernels, browsers have been exploited because of unchecked (and
+improperly checked) untrusted data. Here, again, tainted types can help---and
+as a step in this direction, Mozilla started integrating tainted types into the
+Firefox IPC layer, as part of the IPDL interface description language used to
+generate boilerplate code for sending and receiving well-typed IPC messages
+[[**R20**][R20]].
 
-<!-- this is not good:
 
-Modern browsers employ multiple processes to reduce their
-security surface and to employ features such as site-isolation. This
-architecture means that data often has to be transferred back and forth
-between various processes, some of which are potentially compromised. RLBox's
-tainted types could prevent the misuse of unchecked data and offer lazy
-marshalling of data, improving both security and performance.
--->
-
-<!-- Kind of done, but we should cite if we talk about this:
-See: https://www.usenix.org/legacy/event/sec06/tech/full_papers/xu/xu_html/
-
-**Handling untrusted user input:** More generally, there are large classes of
-vulnerabilities that stem from the use of unsanitized data: for instance,
-XSS, SQL injection, and printf format-string vulnerabilities. RLBox could be
-used to help eliminate these kinds of vulnerabilities: it provides a general
-framework for safely handling unsanitized data by using tainted types and
-requiring validators before data use. Indeed, similar solutions employing
-wrapper types have been explored in some of these domains; for example,
-trusted types in JavaScript prevent XSS.
--->
+This list is by no means exhaustive, others have similarly observed that
+tainting can be used to catch and prevent bugs when handling untrusted data
+(e.g., see [[**XBS02**][XBS02]]).
 
 # Beyond RLBox
 
@@ -640,8 +635,6 @@ engineers.
 
 # References
 
-**TODO: sort these**
-
 [**BOM+19**] J. Van Bulck, D. Oswald, E. Marin, A. Aldoseri, F. D. Garcia, and F. Piessens. "[A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes][BOM+19]". In _2019 ACM SIGSAC Conference on Computer and Communications Security (CCS '19)_. ACM, Nov. 2019.
 [BOM+19]: https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf
 
@@ -663,8 +656,11 @@ engineers.
 [**R20**] Tom Ritter. "[Support tainting data received from IPC][R20]". Mozilla Bug 1610005. Jan. 2020.
 [R20]: https://bugzilla.mozilla.org/show_bug.cgi?id=1610005
 
-[**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2004.
+[**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2019.
 [VED+19]: https://www.usenix.org/conference/usenixsecurity19/presentation/vahldiek-oberwagner
+
+[**XBS02**] "[Taint-Enhanced Policy Enforcement: A Practical Approach to Defeat a Wide Range of Attacks][XBS02]" In _Proceedings of USENIX Security 2006_. USENIX, Aug. 2006.
+[XBS02]: https://www.usenix.org/legacy/event/sec06/tech/full_papers/xu/xu_html/
 
 [**YKXE03**] J. Yang, T. Kremenek, Y. Xie, and D. Engler.  "[MECA: an extensible, expressive system and language for statically checking security properties][YKXE03]".  In _Proceedings of the ACM conference on Computer and Communications Security_. ACM, Oct. 2003.
 [YKXE03]: https://web.stanford.edu/~engler/ccs03-meca.pdf
