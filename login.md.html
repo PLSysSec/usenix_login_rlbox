@@ -284,7 +284,7 @@ read past the `mBackBuffer` bounds.
 We must get validators right---a bug in a validator is often a security bug.
 In practice, though, validators are rare and short: The six libraries we
 sandboxed in [[**NDG+20**][NDG+20]] required 2-14 validators each, and these
-validators averaged only 2-4 LOC. Most importantly, by making these
+validators averaged only 2-4 lines of code. Most importantly, by making these
 validators explicit, RLBox makes code reviews easier: security engineers only
 need to review these validators.
 
