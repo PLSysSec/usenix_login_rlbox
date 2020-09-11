@@ -394,31 +394,44 @@ change specifying Wasm enforcement.
 
 ## Using tainted types outside of sandboxing
 
-Although the focus of RLBox is sandboxing, the techniques used by RLBox
-tackle more general problems, such as securing interactions between trusted
-and untrusted code, disaggregating highly intertwined components, or bridging
-ABI incompatibilities. We briefly discuss some additional potential uses of
-RLBox's techniques.
+The security challenges we face when sandboxing libraries are not unique to
+library sandboxing. Developers have to handle untrusted data and control flow
+in many other domains---and our tainted-type approach can help. We give three
+examples.
 
-**TEE runtimes:** Applications running on trusted execution environments (TEEs)
-such as Intel SGX must frequently interface with untrusted code; even code
-from the host OS is considered untrusted in this context. When reviewing the
-code of multiple TEE runtimes, Van Bulck et al. [[**BOM+19**][BOM+19]]
-discovered that almost all frameworks have bugs pertaining to use of
-unchecked data---bugs that RLBox would prevent by construction.
+**TEE runtimes:** Applications running in trusted execution environments
+(TEEs), like Intel's SGX and Arm's TrustZone, interface with untrusted code by
+design---TEEs even consider the OS untrusted. Getting this code right is hard.
+And, unsurprisingly, TEE runtime libraries don't: Van Bulck et al.
+[[**BOM+19**][BOM+19]], for example, found that most frameworks, across several
+TEEs, were vulnerable to bugs RLBox addresses by construction.
 
-**OS kernels:** Operating system kernel code frequently handles userspace pointers,
-but must be careful to never dereference them before checking. RLBox could be used
-to automatically insert these checks prior to dereference.  In fact, prior
-work [[**JW04**][JW04]] extended the compiler support for C's
-attributes to achieve the same effect as having a wrapped type.
+**OS kernels:** Operating System kernels handle untrusted data from user space.
+Bugfinding tools---from MECA at the start of the century [[**YKXE03**][YKXE03]]
+to Sys this year [[**BSE20**][BSE20]]---have found vulnerabilities in kernels
+due to unchecked (or improperly checked) user space data (notably, pointers).
+Frameworks like RLBox could automatically identify where user space data needs
+to be checked and even perform certain checks automatically (e.g., much like we
+ensure that sandbox pointers point to sandbox memory, we can ensure that user
+space pointers point to user space memory).  Indeed, Johnson and Wagner's
+bugfinding tool [[**JW04**][JW04]] even used type inference to such find kernel
+bugs.
 
-**Browser IPC layers:** Modern browsers employ multiple processes to reduce their
+
+**Browser IPC layers:**
+
+<!-- this is not good:
+
+Modern browsers employ multiple processes to reduce their
 security surface and to employ features such as site-isolation. This
 architecture means that data often has to be transferred back and forth
 between various processes, some of which are potentially compromised. RLBox's
 tainted types could prevent the misuse of unchecked data and offer lazy
 marshalling of data, improving both security and performance.
+-->
+
+<!-- Kind of done, but we should cite if we talk about this:
+See: https://www.usenix.org/legacy/event/sec06/tech/full_papers/xu/xu_html/
 
 **Handling untrusted user input:** More generally, there are large classes of
 vulnerabilities that stem from the use of unsanitized data: for instance,
@@ -428,6 +441,7 @@ framework for safely handling unsanitized data by using tainted types and
 requiring validators before data use. Indeed, similar solutions employing
 wrapper types have been explored in some of these domains; for example,
 trusted types in JavaScript prevent XSS.
+-->
 
 # Beyond RLBox
 
@@ -627,20 +641,20 @@ engineers.
 
 **TODO: sort these**
 
-[**NDG+20**] S. Narayan, C. Disselkoen, T. Garfinkel, N. Froyd, E. Rahm, S. Lerner, H. Shacham, and D. Stefan. "[Retrofitting Fine Grain Isolation in the Firefox Renderer][NDG+20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
-[NDG+20]: https://www.usenix.org/conference/usenixsecurity20/presentation/narayan
+[**BOM+19**] J. Van Bulck, D. Oswald, E. Marin, A. Aldoseri, F. D. Garcia, and F. Piessens. "[A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes][BOM+19]". In _2019 ACM SIGSAC Conference on Computer and Communications Security (CCS '19)_. ACM, Nov. 2019.
+[BOM+19]: https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf
 
 [**BSE20**] F. Brown, D. Stefan, and D. Engler. "[Sys: a Static/Symbolic Tool for Finding Good Bugs in Good (Browser) Code][BSE20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
 [BSE20]: https://www.usenix.org/conference/usenixsecurity20/presentation/brown
 
-[**NGLSS19**] S. Narayan, T. Garfinkel, S. Lerner, H. Shacham, and D. Stefan.  "[Gobi: WebAssembly as a Practical Path to Library Sandboxing][NGLSS19]".  arXiv:1912.02285, Dec. 2019.
-[NGLSS19]: https://arxiv.org/abs/1912.02285
-
-[**BOM+19**] J. Van Bulck, D. Oswald, E. Marin, A. Aldoseri, F. D. Garcia, and F. Piessens. "[A Tale of Two Worlds: Assessing the Vulnerability of Enclave Shielding Runtimes][BOM+19]". In _2019 ACM SIGSAC Conference on Computer and Communications Security (CCS '19)_. ACM, Nov. 2019.
-[BOM+19]: https://people.cs.kuleuven.be/~jo.vanbulck/ccs19-tale.pdf
-
 [**JW04**] R. Johnson and D. Wagner. "[Finding User/Kernel Pointer Bugs With Type Inference][JW04]". In _Proceedings of USENIX Security 2004_. USENIX, Aug. 2004.
 [JW04]: https://www.usenix.org/event/sec04/tech/full_papers/johnson/johnson_html/
+
+[**NDG+20**] S. Narayan, C. Disselkoen, T. Garfinkel, N. Froyd, E. Rahm, S. Lerner, H. Shacham, and D. Stefan. "[Retrofitting Fine Grain Isolation in the Firefox Renderer][NDG+20]". In S. Capkun and F. Roesner, eds., _Proceedings of USENIX Security 2020_. USENIX, Aug. 2020.
+[NDG+20]: https://www.usenix.org/conference/usenixsecurity20/presentation/narayan
+
+[**NGLSS19**] S. Narayan, T. Garfinkel, S. Lerner, H. Shacham, and D. Stefan.  "[Gobi: WebAssembly as a Practical Path to Library Sandboxing][NGLSS19]".  arXiv:1912.02285, Dec. 2019.
+[NGLSS19]: https://arxiv.org/abs/1912.02285
 
 [**R19**] Richard Grisenthwaite. "[A Safer Digital Future, By Design][R19]". arm Blueprint. Oct. 2019.
 [R19]: https://www.arm.com/blogs/blueprint/digital-security-by-design
@@ -650,6 +664,10 @@ engineers.
 
 [**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2004.
 [VED+19]: https://www.usenix.org/conference/usenixsecurity19/presentation/vahldiek-oberwagner
+
+[**YKXE03**] J. Yang, T. Kremenek, Y. Xie, and D. Engler.  "[MECA: an extensible, expressive system and language for statically checking security properties][YKXE03]".  In _Proceedings of the ACM conference on Computer and Communications Security_. ACM, Oct. 2003.
+[YKXE03]: https://web.stanford.edu/~engler/ccs03-meca.pdf
+
 
 # Authors
 
