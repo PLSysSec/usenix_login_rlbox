@@ -135,7 +135,7 @@ Hardening this interface in-turn required sanitizing data and regulating control
 between sandboxed libraries and the browser. Thus, ensuring that malicious
 libraries could not break out of their sandbox.
 
-**Sandboxing pitfalls**
+**Security Challenges**
 Hardening the library/application interface manually is labor intensive and
 error prone. To illustrate some of the challenges, let's consider updating the
 `fill_input_buffer` JPEG decoder function. Libjpeg calls this function whenever
@@ -400,7 +400,7 @@ in many other domains---and our tainted-type approach can help. We give three
 examples.
 
 **TEE runtimes:** Applications running in trusted execution environments
-(TEEs), like Intel's SGX and Arm's TrustZone, interface with untrusted code by
+(TEEs), like Intel's SGX and ARM's TrustZone, interface with untrusted code by
 design---TEEs even consider the OS untrusted. Getting this code right is hard.
 And, unsurprisingly, TEE runtime libraries don't: Van Bulck et al.
 [[**BOM+19**][BOM+19]], for example, found that most frameworks, across several
@@ -532,7 +532,7 @@ and more performant. Today, for example, Intel's Memory Protection Key features
 1% overhead when used for in-process isolation (but doesn't scale beyond 16
 sandboxes).  Looking further out, the CHERI capability-based system will
 similarly make in-process isolation---and, memory safety more generally---cheap
-on Arm processors [[**R19**][R19]]. By making it easy to use these features
+on ARM processors [[**R19**][R19]]. By making it easy to use these features
 transparently (e.g., for CHERI it can automatically adjust for ABI differences
 introduced by capabilities), RLBox could lower the barrier to adopting new
 hardware in-process features---and, we hope, this will encourage new hardware
