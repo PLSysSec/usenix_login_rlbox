@@ -152,7 +152,7 @@ it needs more bytes from Firefox. As seen on line 16, Firefox also saves
 the unused input bytes held by libjpeg to an internal back buffer, which it
 sends to libjpeg along with the new input bytes.
 
-```cpp
+```c++
  1: void fill_input_buffer (j_decompress_ptr jd) {
  2:   struct jpeg_source_mgr* src = jd->src;
  3:   nsJPEGDecoder* decoder = jd->client_data;
@@ -237,7 +237,7 @@ args...)` to invoke functions in the sandbox; sandboxed functions cannot be
 called directly.  Similarly, sandboxed code cannot call into the application
 arbitrarily; instead, it can only call functions exposed by the application
 using the `sandbox_callback(app_fn)` API. These APIs don't just make the trust
-boundary explicit, they are also key to data flow safety: They impose a
+boundary explicit, they are also key to data flow safety: they impose a
 strict tainted-type discipline on all functions by requiring all return values
 of sandboxed functions and all callback arguments to be tainted.
 
@@ -259,7 +259,7 @@ argument and `src` variable on line 2 below) and (2) _copy and verify_
 (otherwise tainted) values we need to use (e.g., `jd->client_data` on line 3
 below). 
 
-```cpp
+```c++
  1: void fill_input_buffer (rlbox_sandbox& sandbox, tainted<j_decompress_ptr> jd) {
  2:   tainted<jpeg_source_mgr*> src = jd->src;
  3:   nsJPEGDecoder* decoder = jd->client_data.copy_and_verify(...);
@@ -309,52 +309,42 @@ of specific knowledge about the isolation mechanism.  RLbox uses a few
 techniques abstract away these details. This makes migrating a library into
 RLbox relatively simple and mechanical.
 
-**Incremental Migration**
+**Incremental migration**
+While RLBox automates many tasks, application code still needs to explicitly
+change to use RLBox.  In particular, we to need to add a trust boundary at the
+library interface by turning all control transfers, i.e., library function
+calls and callbacks, into RLBox calls. We also need to write validators to
+sanitize data from the library, as we saw above).  Making these changes all at
+once is frustrating, error-prone---overlooking a single change could might
+suddenly result in crashes or more sublet malfunctions---and hard to debug.
 
-While RLBox automates many tasks, some lines of application code still need to
-explicitly change.  In particular, we to need add a trust boundary at
-the library interface by turning all control transfers (i.e.~library function
-calls and callbacks) into RLBox calls, and writing validator code for inputs
-from the library.  Making these changes all-in-one go can be frustrating, since
-if we overlook a change, our application is suddenly crashing or
-malfunctioning.
-
-To eliminate this frustration, RLBox support _incremental migration_, allowing
-us to modify application code to use the RLBox API one line at a time.  A full
-migration involves multiple steps, and is explained further in our paper
+RLBox addresses these challneges with _incremental migration_, allowing
+deelopers to modify application code to use the RLBox API one line at a time.
+A full migration involves multiple steps, and is explained further in our paper
 [[**NDG+20**][NDG+20]]. However, the key idea is that RLBox provides _escape
-hatches_ which let us to temporarily disable some checks while we are porting.
-Thus, at each step, the application to be compiled, run, and tested.
+hatches_ which let developers temporarily disable some checks while migrating
+their application code.  Thus, at each step, the application can be compiled,
+run, and tested.
 
 RLBox provides two escape hatches:
 
-1) The **UNSAFE_unverified API** can be used to temporarily removing the
-tainted wrapper. As the application is ported, calls to UNSAFE_unverified APIs
-are removed or replaced with validator functions that correctly sanitize
-tainted data.
+1. The **`UNSAFE_unverified` API** allows developers to temporarily remove the
+   tainted type wrapper (to, for example, run and test their code). As the
+   application is ported, calls to `UNSAFE_unverified` APIs are removed or
+   replaced with validator functions that correctly sanitize tainted data.
 
-2) The **RLBox noop sandbox** provides a pass-through sandbox that redirects
-function calls back to the unsandboxed version of the library, while still
-wrapping data as if it were received from a sandboxed library. This allows
-developers to test data validation separately from the actual isolation
-mechanism.
+2. The **RLBox noop sandbox** provides a pass-through sandbox that redirects
+   function calls back to the unsandboxed version of the library, while still
+   wrapping data as if it were received from a sandboxed library. This allows
+   developers to use the RLBox APIs and test data validation separately from
+   the actual isolation mechanism.
 
 Compile-time type errors guide the developer by pointing to the next required
 code change---e.g., data that needs to be validated before use, or control
 transfer code that needs to change to use the RLBox APIs. By the end of the
 process, the application is still fully functional, all the escape
-hatches have been removed, and the application/library interface has
+hatches have been removed, and the application-library interface has
 fully migrated to using tainted types.
-
-<!--
-Developers use these two features to incrementally migrate application code
-to tainted types. Once complete, switching to Wasm-based sandbox enforcement
-only requires changing a single line of code. This also means that the code
-interfacing with the library doesn't have to change---or be
-duplicated---across platforms (e.g., for platforms where NaCl or Wasm
-is not supported). We also discovered some unexpected practical benefits of
-this design as we incorporated RLBox into production code:
--->
 
 We found that incremental migration greatly simplified the code review process.
 In Firefox, we could commit and get reviews for partial migrations to the RLBox
@@ -362,28 +352,30 @@ API, since the Firefox browser continued to build and run nightly builds as
 before. Additionally, we could explicitly include security reviews when writing
 the data validators for tainted data.
 
-We also found the noop sandbox was also useful as a way of selectively enabling
-library sandboxing in conditional builds. To wit, the developers of the Tor
-browser (a downstream project of the Firefox for anonymous web browsing), are
-interested in sandboxing more libraries than mainline Firefox, as they favor a
-different performance vs. assurance trade-off. Using the noop sandbox will
-allow Tor developers to contribute upstream changes to sandbox libraries in
-mainline Firefox, without adding noticable overhead.  Tor can then selectively
-enable additional sandboxing with a one line change.  This will allow Tor
-developers to utilize RLBox, without forcing them to maintain a major fork.
+Beyond migration, we found the noop sandbox to be useful for selectively
+enabling library sandboxing in conditional builds. For example, while Firefox
+on Linux and OS&nbsp;X uses Wasm for isolation, Wasm runtime support for
+Windows is incomplete and thus Firefox uses the noop sandbox on Windows builds;
+once Windows support is complete, a single line change will allow us to take
+advantage of the sandbox. This is useful beyond Firefox too: developers of the
+Tor Browser (a downstream project of Firefox for anonymous web browsing), are
+interested in sandboxing more libraries than mainline Firefox, since Tor users
+typically have a higher security-performance threshold. Using the noop sandbox
+will allow Tor developers to contribute upstream changes to sandbox libraries
+in mainline Firefox, using the noop sandbox to avoid noticable overhead.  Tor
+can then selectively enable additional sandboxing (again) with a one line
+change, without maintain a major fork.
 
-**ABI Translation**
+**ABI translations**
+Isolation mechanisms can have different machine models and ABIs from the rest
+of the application.  For example, Wasm is a 32-bit machine whose linear address
+space is orthogonal to the rest of the application address space, and uses
+types with different sizes and different machine representations.  Handling
+these differences manually is laborious and error-prone.
 
-Isolation mechanisms may employ different ABI's than the rest of the
-application.  For example, the Wasm sandbox linear address space is orthogonal
-to the rest of the application address space, and employs types with different
-sizes and different machine representations.  RLBox can abstract and
-automatically reconcile these differences, since all control and data flow goes
-through explicit APIs and explicit types.
-
-Consider this line from the previous `fill_input_buffer` example where RLBox
+Consider line 10 from the previous `fill_input_buffer` example where RLBox
 automatically transforms pointers, and accounts for the difference in the size
-of "long" and "void*".
+of `long` and `void*`:
 
 ```c++
 // mInfo is an object of type jpeg_decompress_struct
@@ -396,19 +388,21 @@ If we port this manually, the resulting code would look as follows.
 auto err_field = adjust_for_abi_get_minfo_field(decoder->minfo, "err");
 auto err_field_swizzled = adjust_for_abi_convert_pointer(err_field);
 auto msg_field = adjust_for_abi_get_err_field(*err_field_swizzled, "msg_code");
-assert(in_sandbox_memory(msg_field)); // Bounds check
+assert(in_sandbox_memory(msg_field)); // Ensure pointer is in sandbox memory
 auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
-// assign the value
+// Assign the value
 *msg_field_swizzled = adjust_for_abi(JERR_OUT_OF_MEMORY);
 ```
 
-In contrast, RLBox allows this with almost no changes other than marking
-`mInfo` as tainted:
+In contrast, RLBox requires no changes other than marking `mInfo` as tainted:
 
 ```c++
 // mInfo is an object of type tainted<jpeg_decompress_struct>
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
+
+RLBox can abstract and automatically reconcile ABI differences since all
+control and data flow goes through explicit APIs and explicit types.
 
 ## Using tainted types outside of library sandboxing
 
