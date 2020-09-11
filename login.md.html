@@ -295,21 +295,20 @@ and `decoder->mInfo.err` pointers to point to sandbox memory.
 
 ## Using tainted types to minimize engineering effort
 
-As previously noted, retrofitting sandboxing manualy is labor intensive, and
-demands a great deal of specific knowledge about the isolation mechanism.
-RLbox uses a few techniques abstract away these details, and make the process
-of migrating a library into RLbox relatively simple and mechanical.
+Retrofitting sandboxing manually is labor intensive, and demands a great deal
+of specific knowledge about the isolation mechanism.  RLbox uses a few
+techniques abstract away these details. This makes migrating a library into
+RLbox relatively simple and mechanical.
 
 **Incremental Migration**
 
-While RLBox makes many tasks transparent, we still need to change many lines of
-application code as we port to RLBox.  For example, all control transfer to and
-from the sandbox (i.e.~library calls and callbacks) must be turned into RLBox
-calls. We do this both to add an explicit trust boundary, and to abstract the
-specifics of the isolation mechanism. We also need to write specific validation
-code for inputs from the library. Making these changes all-in-one go can be
-frustrating, since if we overlook a change, suddenly our application is
-crashing.
+While RLBox automates many tasks, some lines of application code still need to
+explicitly change.  In particular, we to need add a trust boundary at
+the library interface by turning all control transfers (i.e.~library function
+calls and callbacks) into RLBox calls, and writing validator code for inputs
+from the library.  Making these changes all-in-one go can be frustrating, since
+if we overlook a change, our application is suddenly crashing or
+malfunctioning.
 
 To eliminate this frustration, RLBox support _incremental migration_, allowing
 us to modify application code to use the RLBox API one line at a time.  A full
@@ -320,12 +319,12 @@ Thus, at each step, the application to be compiled, run, and tested.
 
 RLBox provides two escape hatches:
 
-1) **The UNSAFE_unverified API** may be used on any tainted data to temporarily
-removing the tainted wrapper. As the application is ported, calls to
-UNSAFE_unverified APIs are removed or replaced with validator functions
-that sanitize the given data.
+1) The **UNSAFE_unverified API** can be used to temporarily removing the
+tainted wrapper. As the application is ported, calls to UNSAFE_unverified APIs
+are removed or replaced with validator functions that correctly sanitize
+tainted data.
 
-2) **The RLBox noop sandbox** provides a pass-through sandbox that redirects
+2) The **RLBox noop sandbox** provides a pass-through sandbox that redirects
 function calls back to the unsandboxed version of the library, while still
 wrapping data as if it were received from a sandboxed library. This allows
 developers to test data validation separately from the actual isolation
@@ -333,7 +332,7 @@ mechanism.
 
 Compile-time type errors guide the developer by pointing to the next required
 code change---e.g., data that needs to be validated before use, or control
-transfer code that needs to be changed to use the RLBox APIs. By the end of the
+transfer code that needs to change to use the RLBox APIs. By the end of the
 process, the application is still fully functional, all the escape
 hatches have been removed, and the application/library interface has
 fully migrated to using tainted types.
@@ -355,14 +354,14 @@ before. Additionally, we could explicitly include security reviews when writing
 the data validators for tainted data.
 
 We also found the noop sandbox was also useful as a way of selectively enabling
-library sandboxing. To wit, the developers of the Tor browser (a downstream
-project of the Firefox browser for anonymous web browsing), are interested in
-sandboxing more libraries than mainline Firefox, as they favor different
-performance vs. assurance tradeoffs. Using the noop sandbox can allow Tor
-developers to to contribute upstream changes to sandbox libraries in mainline
-Firefox, without forcing Firefox to incur additional overhead. Tor can then
-enable sandboxing with a one line change. This will allow Tor developers to
-utilize RLBox, without forcing them to maintain a major fork.
+library sandboxing in conditional builds. To wit, the developers of the Tor
+browser (a downstream project of the Firefox for anonymous web browsing), are
+interested in sandboxing more libraries than mainline Firefox, as they favor a
+different performance vs. assurance trade-off. Using the noop sandbox will
+allow Tor developers to contribute upstream changes to sandbox libraries in
+mainline Firefox, without adding noticable overhead.  Tor can then selectively
+enable additional sandboxing with a one line change.  This will allow Tor
+developers to utilize RLBox, without forcing them to maintain a major fork.
 
 **ABI Translation**
 
