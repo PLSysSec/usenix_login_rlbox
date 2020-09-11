@@ -281,11 +281,12 @@ ensure that `decoder` points to a valid `nsJPEGDecoder` object not used by a
 concurrent thread, while on line 16 we ensure that copying `nr` bytes won't
 read past the `mBackBuffer` bounds.
 
-We must get validators right---a bug in a validator is often a security
-bug. In practice, though, validators are rare and short, typically only a few
-lines of code.  (**TODO: shr add stats from.**) Most importantly, by making
-these validators explicit, RLBox makes code reviews easier: security engineers
-only need to review these validators.
+We must get validators right---a bug in a validator is often a security bug.
+In practice, though, validators are rare and short: The six libraries we
+sandboxed in [[**NDG+20**][NDG+20]] required only 2-14 validators each, averaging
+2-4 LOC per validator. Most importantly, by making these validators explicit,
+RLBox makes code reviews easier: security engineers only need to review these
+validators.
 
 What's missing in this code snippet is almost as important: we don't write
 validators on lines 2, 5, and 10, for example. Instead, RLBox uses runtime
