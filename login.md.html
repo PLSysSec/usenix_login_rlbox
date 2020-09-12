@@ -235,8 +235,8 @@ RLBox mediates control flow with explicit APIs for control transfers.  Calls
 into the sandbox must use `sandbox_invoke(sbx_fn, args...)`.  Callbacks into
 the application can only use functions registered with the
 `sandbox_callback(app_fn)` API.  These APIs also impose a strict data flow
-dicipline by forcing all sandbox function return values and callback arguments
-to be tainted.
+dicipline by forcing all sandbox function return values, and callback
+arguments, to be tainted.
 
 As we show next, this tainted-type-driven approach addresses both the security
 and engineering challenges we outline above.
@@ -301,22 +301,22 @@ and `decoder->mInfo.err` pointers to point to sandbox memory.
 
 ## Using tainted types to minimize engineering effort
 
-Retrofitting sandboxing manually is labor intensive, and demands a great deal
-of specific knowledge about the isolation mechanism.  RLbox uses a few
-techniques abstract away these details. This makes migrating a library into
-RLbox relatively simple and mechanical.
+Manually migating an application use library sandboxing is labor intensive, and
+demands a great deal of specific knowledge about the isolation mechanism.
+RLbox abstracts away many of these specifics, making migration relatively
+simple and mechanical.
 
 **Incremental migration**
-While RLBox automates many tasks, application code still needs to explicitly
-change to use RLBox.  In particular, we to need to add a trust boundary at the
-library interface by turning all control transfers, i.e., library function
-calls and callbacks, into RLBox calls. We also need to write validators to
-sanitize data from the library, as we saw above).  Making these changes all at
+While RLBox automates many tasks, we still need to change application code
+to use RLBox.  In particular, we to need to add a trust boundary at the
+library interface by turning all control transfers (i.e., library function
+calls and callbacks) into RLBox calls, and we need to write validators to
+sanitize data from the library, as we saw above.  Making these changes all at
 once is frustrating, error-prone---overlooking a single change could might
 suddenly result in crashes or more sublet malfunctions---and hard to debug.
 
-RLBox addresses these challneges with _incremental migration_, allowing
-deelopers to modify application code to use the RLBox API one line at a time.
+RLBox addresses these challenges with _incremental migration_, allowing
+developers to modify application code to use the RLBox API one line at a time.
 A full migration involves multiple steps, and is explained further in our paper
 [[**NDG+20**][NDG+20]]. However, the key idea is that RLBox provides _escape
 hatches_ which let developers temporarily disable some checks while migrating
@@ -349,7 +349,7 @@ API, since the Firefox browser continued to build and run nightly builds as
 before. Additionally, we could explicitly include security reviews when writing
 the data validators for tainted data.
 
-Beyond migration, we found the noop sandbox to be useful for selectively
+Beyond migration, we also found the noop sandbox to be useful for selectively
 enabling library sandboxing in conditional builds. For example, while Firefox
 on Linux and OS&nbsp;X uses Wasm for isolation, Wasm runtime support for
 Windows is incomplete and thus Firefox uses the noop sandbox on Windows builds;
@@ -361,7 +361,7 @@ typically have a higher security-performance threshold. Using the noop sandbox
 will allow Tor developers to contribute upstream changes to sandbox libraries
 in mainline Firefox, using the noop sandbox to avoid noticable overhead.  Tor
 can then selectively enable additional sandboxing (again) with a one line
-change, without maintain a major fork.
+change, rather than having to maintain a major fork.
 
 **ABI translations**
 Isolation mechanisms can have different machine models and ABIs from the rest
@@ -514,7 +514,7 @@ protocol IDL [[**R20**][R20]].
 ## Beyond software-based isolation
 
 We designed RLBox to be make it easy for developers plug-in different isolation
-mechanism. This makes it easy to migrate code (e.g., by using the noop
+mechanisms. This makes it easy to migrate code (e.g., by using the noop
 sandbox), as we describe above. It also allows developers to use different
 isolation mechanisms that have different trade-offs.  For example, while in
 production we use WebAssembly for isolation, in [[**NDG+20**][NDG+20]] we
@@ -562,9 +562,9 @@ of unsafe code is one way that packages are compared.
 
 Sandboxing is another way that package authors can provided differentiated
 value, by integrating sandboxing support into their library.  This could look
-like authors distibuting their packages with most or all of the work required
+like authors distributing their packages with most or all of the work required
 to sandbox that package done upfront by the package author.  Developers could
-then choose wether or not enable sandboxing with minimal additional fanfare.
+then choose whether or not enable sandboxing with minimal additional fanfare.
 
 To enable this, the package author could specify an system level sandboxing
 policy, (e.g. granting access to the file system or network), and developers
