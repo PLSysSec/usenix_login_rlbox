@@ -176,7 +176,7 @@ which it sends to libjpeg along with the new input bytes.
 19: }
 ````
 
-When sandboxing libjpeg, we needed to make the following changes:
+When sandboxing libjpeg, we need to make the following changes:
 
 - Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
   arbitrary-read gadget.
@@ -195,11 +195,11 @@ When sandboxing libjpeg, we needed to make the following changes:
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have data race that results in a use-after-free vulnerability.
 
-If we missed any of these checks---and these are only a limited sample of the kind
+If we miss any of these checks---and these are only a limited sample of the kind
 of checks required [[**NDG+20**][NDG+20]]---an attacker could potential bypass
-our sandbox through a confused deputy attack.  Further, not only was adding the
-right checks to the hundreds of Firefox functions that interact with libjpeg
-tedious, but we frequently found checks that we had overlooked.
+our sandbox through a confused deputy attack.  Not only was adding
+these checks to the hundreds of Firefox functions that use libjpeg
+tedious, but we frequently found checks we had overlooked.
 
 **Engineering effort**
 The upfront engineering effort of modifying the browser this way was huge.
