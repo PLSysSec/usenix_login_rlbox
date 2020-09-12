@@ -97,7 +97,7 @@ interaction, and identifies _all_ places where the programmer will
 have to add data-checking code.  With RLBox, programmers have a
 framework that makes it easy to sandbox libraries (1) _securely_,
 ensuring the interface between the untrusted library and the
-application code is correct, and with (2) _minimal engineering
+application code is correct, and (2) with _minimal engineering
 effort_, so that the cost of migrating libraries and applications to
 sandboxing is not prohibitive.
 
@@ -191,10 +191,10 @@ When sandboxing libjpeg, we need to make the following changes:
   the pointers to account for the potentially different machine model of the
   sandbox. Both NaCl and Wasm have different pointer representations.
 - Ensure that multiple threads can't invoke the callback on the same image,
-  otherwise we have data race that results in a use-after-free vulnerability.
+  otherwise we have a data race that results in a use-after-free vulnerability.
 
 If we miss any of these checks---and these are only a limited sample of the kind
-of checks required [[**NDG+20**][NDG+20]]---an attacker could potential bypass
+of checks required [[**NDG+20**][NDG+20]]---an attacker could potentially bypass
 our sandbox through a confused deputy attack.  Not only was adding
 these checks to the hundreds of Firefox functions that use libjpeg
 tedious, but we frequently found checks we had overlooked.
@@ -221,7 +221,7 @@ data and control flow at the application-sandbox boundary explicit---using
 types--and by providing APIs to both mediate these flows and enforce security
 checks across the trust boundary.
 
-RLBox mediates data flow using _tainted types_---type wrappers are used to
+RLBox mediates data flow using _tainted types_---it uses type wrappers to
 demarcate data originating from the sandbox, and ensure
 that application code cannot use this data unsafely.  For example, while
 application code can add two `tainted<int>`s (to produce another
@@ -233,7 +233,7 @@ RLBox mediates control flow with explicit APIs for control transfers.  Calls
 into the sandbox must use `sandbox_invoke(sbx_fn, args...)`.  Callbacks into
 the application can only use functions registered with the
 `sandbox_callback(app_fn)` API.  These APIs also impose a strict data flow
-dicipline by forcing all sandbox function return values, and callback
+discipline by forcing all sandbox function return values, and callback
 arguments, to be tainted.
 
 As we show next, this tainted-type-driven approach addresses both the security
@@ -252,7 +252,7 @@ Consider, for example, the JPEG decoder callback from before. RLBox type errors
 would guide us to (1) mark values from the sandbox as tainted (e.g., the `jd`
 argument and `src` variable on line 2 below) and (2) _copy and verify_
 (otherwise tainted) values we need to use (e.g., `jd->client_data` on line 3
-below). 
+below).
 
 ```c++
  1: void fill_input_buffer (rlbox_sandbox& sandbox, tainted<j_decompress_ptr> jd) {
@@ -299,19 +299,19 @@ and `decoder->mInfo.err` pointers to point to sandbox memory.
 
 ## Using tainted types to minimize engineering effort
 
-Manually migating an application use library sandboxing is labor intensive, and
+Manually migrating an application to use library sandboxing is labor intensive, and
 demands a great deal of specific knowledge about the isolation mechanism.
 RLbox abstracts away many of these specifics, making migration relatively
 simple and mechanical.
 
 **Incremental migration**
 While RLBox automates many tasks, we still need to change application code
-to use RLBox.  In particular, we to need to add a trust boundary at the
+to use RLBox.  In particular, we need to add a trust boundary at the
 library interface by turning all control transfers (i.e., library function
 calls and callbacks) into RLBox calls, and we need to write validators to
 sanitize data from the library, as we saw above.  Making these changes all at
-once is frustrating, error-prone---overlooking a single change could might
-suddenly result in crashes or more sublet malfunctions---and hard to debug.
+once is frustrating, error-prone---overlooking a single change might
+suddenly result in crashes or more subtle malfunctions---and hard to debug.
 
 RLBox addresses these challenges with _incremental migration_, allowing
 developers to modify application code to use the RLBox API one line at a time.
@@ -413,7 +413,7 @@ And, unsurprisingly, TEE runtime libraries don't: Van Bulck et al.
 [[**BOM+19**][BOM+19]], for example, found that most frameworks, across several
 TEEs, were vulnerable to bugs RLBox addresses by construction.
 
-**OS kernels:** Operating systems kernels handle untrusted data from user
+**OS kernels:** Operating system kernels handle untrusted data from user
 space.  Bugfinding tools---from MECA at the start of the century
 [[**YKXE03**][YKXE03]] to Sys this year [[**BSE20**][BSE20]]---have found many
 vulnerabilities in kernels due to unchecked (or improperly checked) user space
@@ -430,7 +430,7 @@ different parts of the browser into sandboxed processes. Almost all separate
 the _renderer_ parts---the portion of the browser that handles untrusted user
 content from HTML parsing, to JavaScript execution, to image decoding and
 rendering---from the _chrome_ parts---the trusted portion of the browser that
-can access the file system, network, etc.----and restrict communication to a
+can access the file system, network, etc.---and restrict communication to a
 well-typed inter-process communication (IPC) layer. Like OS kernels, the
 browser chrome must validate all values coming from untrusted renderer
 processes; like kernels, browsers have been exploited because of unchecked (and
@@ -441,7 +441,7 @@ generate boilerplate code for sending and receiving well-typed IPC messages
 [[**R20**][R20]].
 
 
-This list is by no means exhaustive, others have similarly observed that
+This list is by no means exhaustive; others have similarly observed that
 tainting can be used to catch and prevent bugs when handling untrusted data
 (e.g., see [[**XBS02**][XBS02]]).
 
@@ -456,7 +456,7 @@ features that can further lower in-process sandboxing overheads.
 
 ## Beyond C++
 
-We implemented RLBox in C++ because Firefox is predominately written in C++.
+We implemented RLBox in C++ because Firefox is predominantly written in C++.
 To extend RLBox to other languages, we need to understand how to implement
 RLBox's tainted type system.
 
@@ -496,54 +496,54 @@ In dynamically-typed languages like JavaScript and Python, we can enforce
 tainted types dynamically.  This, of course, makes the incremental porting loop
 longer since type errors will only manifest at runtime. Luckily, many
 industrial dynamically-typed languages have typed extensions to precisely
-address this limitations (e.g., TypeScript and Flow extend JavaScript with
+address this limitation (e.g., TypeScript and Flow extend JavaScript with
 types).
 
 **Compiler plugins and toolkits**
 For languages not flexible enough to implement the RLBox tainted type system
 statically, we envision implementing the type system as part of language
-toolchains. For example, for C, we can implement RLBox as Clang plugin (to both
+toolchains. For example, for C, we can implement RLBox as a Clang plugin (both to
 enforce the type system and to generate runtime checks). Alternatively, we can
-implement tainted types as part of interface description languages (IDL)
+implement tainted types as part of interface description language (IDL)
 compilers.  As mentioned above, for example, the Mozilla security team is
 integrating tainted types into the Firefox IPDL inter-process communication
 protocol IDL [[**R20**][R20]].
 
 ## Beyond software-based isolation
 
-We designed RLBox to be make it easy for developers plug-in different isolation
+We designed RLBox to be make it easy for developers to plug-in different isolation
 mechanisms. This makes it easy to migrate code (e.g., by using the noop
 sandbox), as we describe above. It also allows developers to use different
 isolation mechanisms that have different trade-offs.  For example, while in
 production we use WebAssembly for isolation, in [[**NDG+20**][NDG+20]] we
-evaluate two other isolation mechanisms: Wasm's predecessor, NaCl, and
-traditional process based isolation.  These isolation mechanisms have different
+evaluate two other isolation mechanisms: Wasm's predecessor NaCl, and
+traditional process-based isolation.  These isolation mechanisms have different
 trade-offs.  Process isolation is simple, but scales poorly---protection
 boundary crossing costs become prohibitive as the number of sandboxes exceed
-the number of available cores.  Wasm and NaCl, on the other hand, scale to
+the number of available cores.  Wasm and NaCl, on the other hand, scale to a
 large number of sandboxes and have cheap boundary crossings, but impose an
 overhead on the sandboxed code.
 
-At present, Wasm toolchains offers a practical and portable path to isolation.
+At present, Wasm toolchains offer a practical and portable path to isolation.
 But this software-based isolation approach will inevitably be slower than
 running native code.
 
 Hardware support for in-process isolation can offer solutions that are simple
-and more performant. Today, for example, Intel's Memory Protection Key features
-(MPK), when used for in-process isolation [[**VED+19**][VED+19]] incurs roughly
-1% overhead when used for in-process isolation (but doesn't scale beyond 16
-sandboxes).  Looking further out, the CHERI capability-based system will
-similarly make in-process isolation---and, memory safety more generally---cheap
-on ARM processors [[**R19**][R19]]. By making it easy to use these features
-transparently (e.g., for CHERI it can automatically adjust for ABI differences
-introduced by capabilities), RLBox could lower the barrier to adopting new
-hardware in-process features---and, we hope, this will encourage new hardware
-design for in-process isolation.
+and more performant. Today, for example, Intel's Memory Protection Key
+features (MPK) incur roughly 1% overhead when used for in-process isolation
+[[**VED+19**][VED+19]] (but this doesn't scale beyond 16 sandboxes). Looking
+further out, the CHERI capability-based system will similarly make in-process
+isolation---and memory safety more generally---cheap on ARM processors
+[[**R19**][R19]]. By making it easy to use these features transparently
+(e.g., for CHERI it can automatically adjust for ABI differences introduced
+by capabilities), RLBox could lower the barrier to adopting new hardware
+isolation features---and, we hope, this will encourage new hardware design for
+in-process isolation.
 
 ## Bringing sandboxing to the developer ecosystem
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
-point.  Our hope is that library sandboxing will become a first class activity
+point.  Our hope is that library sandboxing will become a first-class activity
 in future development environments, and that RLBox's capabilities will
 ultimately be subsumed by standard parts of tomorrow's languages, toolchains and
 package managers. We believe in many cases such support could allow the use of
@@ -553,14 +553,14 @@ libraries today.
 **FFIs and native code**
 Many popular safe languages such as Python, Ruby, and JavaScript make
 extensive use of native (typically C) code in their standard libraries and
-package ecosystems via Foreign Function Interfaces (FFIs). Unfortunately bugs
-in native code can completely break all high-level safety guarantees.
+package ecosystems via Foreign Function Interfaces (FFIs). Unfortunately,
+bugs in native code can completely break all high-level safety guarantees.
 
 Extending FFI interfaces and interface generation tools with first-class
 support for sandboxing native code is very natural---both because the FFI
 boundary is explicit and because developers are used to writing code that spans
 trust boundaries.  Sandboxing unsafe code not only improves assurance, but can
-also improve potability (e.g., by compiling native code to Wasm) and debugging
+also improve portability (e.g., by compiling native code to Wasm) and debugging
 (native code has a long history of generating notoriously difficult bugs).
 
 **Package managers**
@@ -591,7 +591,7 @@ much like they consume type interfaces today.
 
 Decades of attempts to detect and mitigate software vulnerabilities have
 yielded lackluster results. Even browsers, some of the most heavily targeted
-and scrutinized software seem to provide an inexhaustible stream of
+and scrutinized software, seem to provide an inexhaustible stream of
 exploitable vulnerabilities.  In-process sandboxing can offer developers and
 security engineers another choice---moving code (especially legacy and
 third-party code) out of their trusted computing base by sandboxing it,
@@ -602,9 +602,9 @@ being used to sandbox third-party and in-house libraries in Firefox, and we
 hope that other C++ projects will choose to adopt it. Looking further out, we
 hope to collaborate with developers of programming languages (and their
 toolchains and standard libraries), package managers, and processor architects
-to provide first class support for in-process sandboxing. Small changes to make in-process
-sandboxing first-class can result in huge benefits for developers and
-security engineers.
+to provide first-class support for in-process sandboxing. Small changes to
+make in-process sandboxing first-class can result in huge benefits for
+developers and security engineers.
 
 # References
 
@@ -629,10 +629,10 @@ security engineers.
 [**R20**] Tom Ritter. "[Support tainting data received from IPC][R20]". Mozilla Bug 1610005. Jan. 2020.
 [R20]: https://bugzilla.mozilla.org/show_bug.cgi?id=1610005
 
-[**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2019.
+[**VED+19**] A. Vahldiek-Oberwagner, E. Elnikety, N.O. Duarte, M. Sammler, P. Druschel, and D. Garg. "[ERIM: Secure, Efficient In-process Isolation with Protection Keys (MPK)][VED+19]".  In _Proceedings of USENIX Security 2019_. USENIX, Aug. 2019.
 [VED+19]: https://www.usenix.org/conference/usenixsecurity19/presentation/vahldiek-oberwagner
 
-[**XBS02**] "[Taint-Enhanced Policy Enforcement: A Practical Approach to Defeat a Wide Range of Attacks][XBS02]" In _Proceedings of USENIX Security 2006_. USENIX, Aug. 2006.
+[**XBS02**] W. Xu, S. Bhatkar, and R. Sekar. "[Taint-Enhanced Policy Enforcement: A Practical Approach to Defeat a Wide Range of Attacks][XBS02]" In _Proceedings of USENIX Security 2006_. USENIX, Aug. 2006.
 [XBS02]: https://www.usenix.org/legacy/event/sec06/tech/full_papers/xu/xu_html/
 
 [**YKXE03**] J. Yang, T. Kremenek, Y. Xie, and D. Engler.  "[MECA: an extensible, expressive system and language for statically checking security properties][YKXE03]".  In _Proceedings of the ACM conference on Computer and Communications Security_. ACM, Oct. 2003.
