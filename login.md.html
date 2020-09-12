@@ -542,7 +542,7 @@ introduced by capabilities), RLBox could lower the barrier to adopting new
 hardware in-process features---and, we hope, this will encourage new hardware
 design for in-process isolation.
 
-# Bringing sandboxing to the developer ecosystem
+## Bringing sandboxing to the developer ecosystem
 
 While RLBox has been a boon for our work in Firefox, it's just a starting
 point.  Our hope is that library sandboxing will become a first class activity
@@ -552,13 +552,25 @@ package managers. We believe in many cases such support could allow the use of
 sandboxed libraries with a level of ease comparable to the use of unsandboxed
 libraries today.
 
-## Package managers
+**FFIs and native code**
+Many popular safe languages such as Python, Ruby, and JavaScript make
+extensive use of native (typically C) code in their standard libraries and
+package ecosystems via Foreign Function Interfaces (FFIs). Unfortunately bugs
+in native code can completely break all high-level safety guarantees.
 
+Extending FFI interfaces and interface generation tools with first-class
+support for sandboxing native code is very natural---both because the FFI
+boundary is explicit and because developers are used to writing code that spans
+trust boundaries.  Sandboxing unsafe code not only improves assurance, but can
+also improve potability (e.g., by compiling native code to Wasm) and debugging
+(native code has a long history of generating notoriously difficult bugs).
+
+**Package managers**
 In the ecology of package ecosystems there is constant competition between
-package authors provide the best package for a given task. Security is among
-the ways that package authors can differentiate their package from others. We
-have seen this clearly in the Rust ecosystem, where the presence (or absence)
-of unsafe code is one way that packages are compared.
+package authors to provide the best package for a given task. Security is among
+the ways that package authors have recently started differentiating their
+package from others. We have seen this clearly in the Rust ecosystem, where the
+presence (or absence) of unsafe code is one way that packages are compared.
 
 Sandboxing is another way that package authors can provided differentiated
 value, by integrating sandboxing support into their library.  This could look
@@ -573,29 +585,6 @@ package.  Much of the work of writing validators for tainted types could also
 be mitigated by distributing validators as part of a sandboxed library. While
 this would entail placing trust in the author of the validators, because they
 are a relatively small amount of code, auditing them could be quite tractable.
-
-
-<!--
-!!! TODO --- Clarify (and or remove) the typescript thing, or drop it
-Integrated support for applying tainted types to values produced by sandboxed
-libraries could facilitate safe library use, and a natural syntax for invoking
-sandboxed functions ala. RLBox could make the transition to using sandboxed
-versions of libraries natural and seamless.
-
-M
-Language tooling could automatically adjust its build system to appropriately
-switch to a sandboxing compiler for libraries which the user wants to sandbox.
-The language could potentially even automatically pull in contract definitions
-for each library's interface, using a system similar to what we see today for
-TypeScript. In short, first-class support for RLBox could make sandboxing even
-more seamless for users, resulting in greater security in the greater software
-ecosystem.
-
-In Rust presence of a powerful common build systems and package manager i.e. Cargo,
-also lends itself smooth support for library sandboxing.  Extending Cargo with
-an additional flag in the Cargo.toml file, to to indicate when a dependency
-should be sandboxed could be quite straightforward.
--->
 
 ## FFIs and native code
 
