@@ -217,31 +217,26 @@ approach, built RLBox, and started anew.
 
 # The RLBox framework
 
-RLBox is a C++ library designed to make it easier for developers to retrofit
-applications to securely use sandboxed libraries.  RLBox does this by making
-data and control flow at the application-sandbox boundary explicit---at the
-type level--and by providing APIs to both mediate these flows and enforce
-security checks across the trust boundary.
+RLBox is a C++ library designed to make it easier for developers to securely
+retrofit library sandboxing in existing applications.  It does this by making
+data and control flow at the application-sandbox boundary explicit---using
+types--and by providing APIs to both mediate these flows and enforce security
+checks across the trust boundary.
 
-RLBox mediates data flow using _tainted types_---type wrappers used to
-demarcate data originating from the sandbox.  It uses tainted values to ensure
-that application code cannot use sandboxed data unsafely.  For example, while
+RLBox mediates data flow using _tainted types_---type wrappers are used to
+demarcate data originating from the sandbox, and ensure
+that application code cannot use this data unsafely.  For example, while
 application code can add two `tainted<int>`s (to produce another
 `tainted<int>`), it cannot branch on such values or use them as indexes into an
 array. Instead, the application must validate tainted values before it can use
 them.
 
-RLBox mediates control flow by providing APIs for invoking sandboxed functions,
-registering host functions as callbacks---to allow the sandbox to call into the
-application---and more generally exchanging data between the sandbox and
-application.  For example, the application must use `sandbox_invoke(sbx_fn,
-args...)` to invoke functions in the sandbox; sandboxed functions cannot be
-called directly.  Similarly, sandboxed code cannot call into the application
-arbitrarily; instead, it can only call functions exposed by the application
-using the `sandbox_callback(app_fn)` API. These APIs don't just make the trust
-boundary explicit, they are also key to data flow safety: they impose a
-strict tainted-type discipline on all functions by requiring all return values
-of sandboxed functions and all callback arguments to be tainted.
+RLBox mediates control flow with explicit APIs for control transfers.  Calls
+into the sandbox must use `sandbox_invoke(sbx_fn, args...)`.  Callbacks into
+the application can only use functions registered with the
+`sandbox_callback(app_fn)` API.  These APIs also impose a strict data flow
+dicipline by forcing all sandbox function return values and callback arguments
+to be tainted.
 
 As we show next, this tainted-type-driven approach addresses both the security
 and engineering challenges we outline above.
