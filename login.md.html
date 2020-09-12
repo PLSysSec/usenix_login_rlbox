@@ -145,7 +145,7 @@ between sandboxed libraries and the browser. Thus, ensuring that malicious
 libraries could not break out of their sandbox.
 
 Our first attempt at sandboxing libraries in Firefox involved manually
-hardening the library/application interface---this did not go well.
+hardening the library-application interface---this did not go well.
 
 **Security Challenges**
 To see how things can go wrong, let's consider
@@ -625,17 +625,17 @@ yielded lackluster results. Even browsers, some of the most heavily targeted
 and scrutinized software seem to provide an inexhaustible stream of
 exploitable vulnerabilities.  In-process sandboxing can offer developers and
 security engineers another choice---moving code (especially legacy and
-third-party code) out of their trusted computing base by sandboxing it, and
-thus mitigating the impacts of a compromise.
+third-party code) out of their trusted computing base by sandboxing it,
+thus mitigating the impact of a compromise.
 
-We developed RLBox to make in-process sandboxing practical and use it to
-sandbox libraries in Firefox.  We hope that other C++ projects will similarly
-use RLBox to harden their applications. Looking further out, we hope to
-collaborate with developers of programming languages (and their toolchains and
-standard libraries), package managers, and processor architects to make
-in-process sandboxing first class. Small changes to make in-process sandboxing
-first-class can result in huge benefits for both developers and security
-engineers.
+We developed RLBox to make in-process sandboxing practical. It is currently
+being used to sandbox third-party and in-house libraries in Firefox, and we
+hope that other C++ projects will choose to adopt it. Looking further out, we
+hope to collaborate with developers of programming languages (and their
+toolchains and standard libraries), package managers, and processor architects
+to provide first class support for in-process sandboxing. Small changes to make in-process
+sandboxing first-class can result in huge benefits for developers and
+security engineers.
 
 # References
 
