@@ -578,13 +578,16 @@ like authors distributing their packages with most or all of the work required
 to sandbox that package done upfront by the package author.  Developers could
 then choose whether or not enable sandboxing with minimal additional fanfare.
 
-To enable this, the package author could specify an system level sandboxing
-policy, (e.g. granting access to the file system or network), and developers
-could then choose if and how to grant these privileges when importing a
-package.  Much of the work of writing validators for tainted types could also
-be mitigated by distributing validators as part of a sandboxed library. While
-this would entail placing trust in the author of the validators, because they
-are a relatively small amount of code, auditing them could be quite tractable.
+To enable this, the package author could specify a system level sandboxing
+policy (e.g., as a manifest file requesting access to parts of the file system
+or network), and developers could then choose if and how to grant these
+privileges when importing a package.  Much of the work of writing validators
+for tainted types could also be mitigated by distributing validators as part of
+a sandboxed library. We even envision an ecosystem of sandbox interface
+declarations for existing packages, much like TypeScript type declarations for
+JavaScript packages, which will allow to developers to pull sandboxed interfaces
+much like they consume type interfaces today.
+
 
 # Conclusions
 
