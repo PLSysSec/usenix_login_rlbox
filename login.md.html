@@ -586,21 +586,6 @@ be mitigated by distributing validators as part of a sandboxed library. While
 this would entail placing trust in the author of the validators, because they
 are a relatively small amount of code, auditing them could be quite tractable.
 
-## FFIs and native code
-
-Many popular safe languages such as Python, Ruby, and Javascript (ala Node.js)
-make extensive use of unsafe code (most commonly C), in their standard
-libraries and package ecosystems through the use of a Foreign Function
-Interface (FFI).
-
-Providing first class support for sandboxing native code is a very natural way
-to extend FFI interfaces and interface generation tools, and bring library
-sandboxing into a language toolchain.
-
-Sandboxing unsafe code not only benefits assurance, but can also provide
-significant benefits for debugging. Unsafe code that violates invariants of the
-language runtime has a long history of generating notoriously difficult bugs.
-
 # Conclusions
 
 Decades of attempts to detect and mitigate software vulnerabilities have
