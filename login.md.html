@@ -5,10 +5,10 @@
 # Abstract
 
 Firefox currently ships with a variety of third-party and in-house libraries
-running sandboxed, in-process, using a framework called RLBox. We explore how
+running sandboxed, in-process, using a new framework called RLBox. We explore how
 RLBox uses the C++ type system to simplify retrofitting sandboxing in existing
 code bases, and consider how better tooling and architecture support can enable
-a future where library sandboxing is normal part of how we secure applications.
+a future where library sandboxing is a standard part of how we secure applications.
 
 
 # Introduction
@@ -673,11 +673,22 @@ _Hovav Schacham_
 
 Bio, pic:
 
-_Deian Stefan_
+![](deian.jpg#biopic width=100) _Deian Stefan_ is an Assistant Professor of CSE at UC San Diego, where he
+co-leads the Security and Programming Systems groups.  He received his PhD from
+Stanford University in 2016.  Deian was a cofounder of Intrinsic, a web
+security start-up (acquired by VMWare).  His current research lies at the
+intersection of secure systems, programming languages, and verification.
+deian@cs.ucsd.edu
 
-Bio, pic:
 
 <style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
+<style>
+img[src*="#biopic"] {
+  float:left;
+  margin-right: 1em;
+  border: 1px solid black;
+}
+</style>
 <script src="markdeep.min.js"></script>
 <script>
   window.alreadyProcessedMarkdeep || (document.body.style.visibility="visible");
