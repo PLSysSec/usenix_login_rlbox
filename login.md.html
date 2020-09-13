@@ -8,7 +8,6 @@ RLBox uses the C++ type system to simplify retrofitting sandboxing in existing
 code bases, and consider how better tooling and architecture support can enable
 a future where library sandboxing is a standard part of how we secure applications.
 
-
 # Introduction
 
 Users expect featureful software, and features, it hardly needs
@@ -47,7 +46,7 @@ The sandboxed module will still have bugs, but those bugs will not (in
 most cases; see below) create security vulnerabilities in the
 enclosing program.
 
-Consider an image decoding library like libpng.  With sandboxing, we
+Consider an image decoding library like libjpeg.  With sandboxing, we
 can restrict this library so it has access to the image it decodes and
 the bitmap it produces, _and that's it_.  Or, consider a
 spell-checking library like Hunspell.  With sandboxing, we can
@@ -86,7 +85,7 @@ sandboxing Firefox libraries are a case in point.  Firefox had been
 written under the assumptions that the libraries were trustworthy.
 Even when isolated, they could return data values that would cause the
 (unsandboxed) Firefox code to take unsafe actions, a scenario that
-security researchers describe as a "confused deputy" attack.  We tried
+security researchers describe as a confused deputy attack.  We tried
 to add code to manually check return values for consistency, but
 repeatedly found that we had missed cases and left open avenues for
 attack.
@@ -176,20 +175,22 @@ which it sends to libjpeg along with the new input bytes.
 
 When sandboxing libjpeg, we need to make the following changes:
 
-- Sanitize `jd`, otherwise the read of `jd->src` on line 2 becomes an
-  arbitrary-read gadget.
+- Sanitize `jd`, otherwise the read of `jd->src` on line 2 could become a
+  read gadget.
 - Sanitize `src`, otherwise the write to `src->next_input_byte` on line 5
-  becomes an arbitrary-write gadget and the `memmove()` on line 16 becomes an
+  becomes a write gadget and the `memmove()` on line 16 becomes an
   arbitrary read.
 - Sanitize `jd->client_data` to ensure it points to a valid Firefox
   `nsJPEGDecoder` object, otherwise invoking a virtual method on it will hijack
   control flow.
-- Sanitize the nested pointer `mInfo.err` on line 10 prior to dereferencing.
+- Sanitize the nested pointer `mInfo.err` on line 10 prior to dereferencing else
+  it becomes a write gadget.
 - Sanitize the pointer `decoder->mBackBuffer + decoder->mBackBufferLen` used on
-  the destination address to `memmove()` on line 16. **TODO: shr, this seems wrong**
-- Swizzle pointers like `mInfo.err` and `decoder->mBackBuffer`, i.e., translate
-  the pointers to account for the potentially different machine model of the
-  sandbox. Both NaCl and Wasm have different pointer representations.
+  the destination address to `memmove()` on line 16 to prevent overflows of the
+  unused byte buffer.
+- Adjust pointer representations for `mInfo.err` and `decoder->mBackBuffer` --
+  both NaCl and Wasm have different pointer representations and we must
+  translate or swizzle these pointers accordingly.
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have a data race that results in a use-after-free vulnerability.
 
@@ -279,8 +280,8 @@ below).
 
 On line 3, 16, and 18 we need to write validators (as C++ lambdas to the
 `copy_and_verify` method).  As we describe in [[**NDG+20**][NDG+20]], validators
-fall into one of two categories: preserving application invariants (e.g.,
-memory safety) or enforcing library invariants.  On line 3, for example, we
+would fall into one of two categories: preserving application invariants (e.g.,
+memory safety) or enforcing library invariants.  On line 3, for example, we must
 ensure that `decoder` points to a valid `nsJPEGDecoder` object not used by a
 concurrent thread, while on line 16 we ensure that copying `nr` bytes won't
 read past the `mBackBuffer` bounds.
@@ -292,8 +293,8 @@ validators averaged only 2-4 lines of code. Most importantly, by making these
 validators explicit, RLBox makes code reviews easier: security engineers only
 need to review these validators.
 
-What's missing in this code snippet is almost as important: we don't write
-validators on lines 2, 5, and 10, for example. Instead, RLBox uses runtime
+What's missing in this code snippet is almost as important: we don't write any
+security checks on lines 2, 5, and 10, for example. Instead, RLBox uses runtime
 checks to automatically swizzle and sanitize the `src`, `src->next_input_byte`,
 and `decoder->mInfo.err` pointers to point to sandbox memory.
 
@@ -349,7 +350,7 @@ the data validators for tainted data.
 
 Beyond migration, we also found the noop sandbox to be useful for selectively
 enabling library sandboxing in conditional builds. For example, while Firefox
-on Linux and OS&nbsp;X uses Wasm for isolation, Wasm runtime support for
+on Linux and OS&nbsp;X uses Wasm for isolation, the Lucet Wasm compiler's support for
 Windows is incomplete and thus Firefox uses the noop sandbox on Windows builds;
 once Windows support is complete, a single line change will allow us to take
 advantage of the sandbox. This is useful beyond Firefox too: developers of the
@@ -357,20 +358,18 @@ Tor Browser (a downstream project of Firefox for anonymous web browsing), are
 interested in sandboxing more libraries than mainline Firefox, since Tor users
 typically have a higher security-performance threshold. Using the noop sandbox
 will allow Tor developers to contribute upstream changes to sandbox libraries
-in mainline Firefox, using the noop sandbox to avoid noticable overhead.  Tor
+in mainline Firefox, using the noop sandbox to avoid noticeable overhead.  Tor
 can then selectively enable additional sandboxing (again) with a one line
 change, rather than having to maintain a major fork.
 
 **ABI translations**
 Isolation mechanisms can have different machine models and ABIs from the rest
-of the application.  For example, Wasm is a 32-bit machine whose linear address
-space is orthogonal to the rest of the application address space, and uses
-types with different sizes and different machine representations.  Handling
-these differences manually is laborious and error-prone.
+of the application. For example, Wasm uses a 32-bit machine model meaning that
+that pointers, `int`s, and `long`s are 32-bits. However, this is a different
+machine model from that used by the host application. Handling such differences
+manually is laborious and error-prone.
 
-Consider line 10 from the previous `fill_input_buffer` example where RLBox
-automatically transforms pointers, and accounts for the difference in the size
-of `long` and `void*`:
+Consider line 10 from the previous `fill_input_buffer` example
 
 ```c++
 // mInfo is an object of type jpeg_decompress_struct
@@ -389,15 +388,17 @@ auto msg_field_swizzled = adjust_for_abi_convert_pointer(msg_field);
 *msg_field_swizzled = adjust_for_abi(JERR_OUT_OF_MEMORY);
 ```
 
-In contrast, RLBox requires no changes other than marking `mInfo` as tainted:
+In contrast, RLBox requires no changes other than marking `mInfo` as tainted.
+RLBox automatically transforms pointers, and accounts for the difference in the
+size of `long` and `void*`:
 
 ```c++
 // mInfo is an object of type tainted<jpeg_decompress_struct>
 decoder->mInfo.err->msg_code = JERR_OUT_OF_MEMORY;
 ```
 
-RLBox can abstract and automatically reconcile ABI differences since all
-control and data flow goes through explicit APIs and explicit types.
+RLBox is able to abstract and automatically reconcile ABI differences since all
+control and data flow goes through its APIs and tainted types.
 
 ## Using tainted types outside of library sandboxing
 
@@ -409,7 +410,7 @@ examples.
 **TEE runtimes:** Applications running in trusted execution environments
 (TEEs), like Intel's SGX and ARM's TrustZone, interface with untrusted code by
 design---TEEs even consider the OS untrusted. Getting this code right is hard.
-And, unsurprisingly, TEE runtime libraries don't: Van Bulck et al.
+And, indeed, TEE runtimes contain similar bugs: Van Bulck et al.
 [[**BOM+19**][BOM+19]], for example, found that most frameworks, across several
 TEEs, were vulnerable to bugs RLBox addresses by construction.
 
@@ -423,7 +424,6 @@ automatically (e.g., much like we ensure that sandbox pointers point to sandbox
 memory, we can ensure that user space pointers point to user space memory).
 Indeed, Johnson and Wagner's bugfinding tool [[**JW04**][JW04]] even used type
 inference to find such kernel bugs.
-
 
 **Browser IPC layers:** Modern browser architectures privilege separate
 different parts of the browser into sandboxed processes. Almost all separate
@@ -439,7 +439,6 @@ as a step in this direction, Mozilla started integrating tainted types into the
 Firefox IPC layer, as part of the IPDL interface description language used to
 generate boilerplate code for sending and receiving well-typed IPC messages
 [[**R20**][R20]].
-
 
 This list is by no means exhaustive; others have similarly observed that
 tainting can be used to catch and prevent bugs when handling untrusted data
@@ -495,7 +494,7 @@ time-of-check-time-of-use and double fetch attacks).
 In dynamically-typed languages like JavaScript and Python, we can enforce
 tainted types dynamically.  This, of course, makes the incremental porting loop
 longer since type errors will only manifest at runtime. Luckily, many
-industrial dynamically-typed languages have typed extensions to precisely
+dynamically-typed languages have typed extensions to precisely
 address this limitation (e.g., TypeScript and Flow extend JavaScript with
 static type annotations).
 
@@ -511,12 +510,12 @@ protocol IDL [[**R20**][R20]].
 
 ## Beyond software-based isolation
 
-We designed RLBox to be make it easy for developers to plug-in different isolation
+We designed RLBox to make it easy for developers to plug-in different isolation
 mechanisms. This makes it easy to migrate code (e.g., by using the noop
 sandbox), as we describe above. It also allows developers to use different
 isolation mechanisms that have different trade-offs.  For example, while in
 production we use WebAssembly for isolation, in [[**NDG+20**][NDG+20]] we
-evaluate two other isolation mechanisms: Wasm's predecessor NaCl, and
+evaluate two other isolation mechanisms: NaCl, and
 traditional process-based isolation.  These isolation mechanisms have different
 trade-offs.  Process isolation is simple, but scales poorly---protection
 boundary crossing costs become prohibitive as the number of sandboxes exceed
@@ -531,8 +530,8 @@ running native code.
 Hardware support for in-process isolation can offer solutions that are simple
 and more performant. Today, for example, Intel's Memory Protection Key
 features (MPK) incur roughly 1% overhead when used for in-process isolation
-[[**VED+19**][VED+19]] (but this doesn't scale beyond 16 sandboxes). Looking
-further out, the CHERI capability-based system will similarly make in-process
+[[**VED+19**][VED+19]] (but this doesn't scale beyond 16 sandboxes). In the
+future, the CHERI capability-based system will similarly make in-process
 isolation---and memory safety more generally---cheap on ARM processors
 [[**R19**][R19]]. By making it easy to use these features transparently
 (e.g., for CHERI it can automatically adjust for ABI differences introduced
@@ -555,13 +554,10 @@ Many popular safe languages such as Python, Ruby, and JavaScript make
 extensive use of native (typically C) code in their standard libraries and
 package ecosystems via Foreign Function Interfaces (FFIs). Unfortunately,
 bugs in native code can completely break all high-level safety guarantees.
-
 Extending FFI interfaces and interface generation tools with first-class
 support for sandboxing native code is very natural---both because the FFI
 boundary is explicit and because developers are used to writing code that spans
-trust boundaries.  Sandboxing unsafe code not only improves assurance, but can
-also improve portability (e.g., by compiling native code to Wasm) and debugging
-(native code has a long history of generating notoriously difficult bugs).
+trust boundaries.
 
 **Package managers**
 In the ecology of package ecosystems there is constant competition between
@@ -570,7 +566,7 @@ the ways that package authors have recently started differentiating their
 package from others. We have seen this clearly in the Rust ecosystem, where the
 presence (or absence) of unsafe code is one way that packages are compared.
 
-Sandboxing is another way that package authors can provided differentiated
+Sandboxing is another way that package authors can provide differentiated
 value, by integrating sandboxing support into their library.  This could look
 like authors distributing their packages with most or all of the work required
 to sandbox that package done upfront by the package author.  Developers could
@@ -586,7 +582,6 @@ declarations for existing packages, much like TypeScript type declarations for
 JavaScript packages, which will allow to developers to pull sandboxed interfaces
 much like they consume type interfaces today.
 
-
 # Conclusions
 
 Decades of attempts to detect and mitigate software vulnerabilities have
@@ -597,7 +592,7 @@ security engineers another choice---moving code (especially legacy and
 third-party code) out of their trusted computing base by sandboxing it,
 thus mitigating the impact of a compromise.
 
-We developed RLBox to make in-process sandboxing practical. It is currently
+We developed RLBox to make sandboxing practical. It is currently
 being used to sandbox third-party and in-house libraries in Firefox, and we
 hope that other C++ projects will choose to adopt it. Looking further out, we
 hope to collaborate with developers of programming languages (and their
