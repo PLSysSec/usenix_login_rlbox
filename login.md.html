@@ -190,7 +190,7 @@ When sandboxing libjpeg, we need to make the following changes:
   unused byte buffer.
 - Adjust pointer representations for `mInfo.err` and `decoder->mBackBuffer` --
   both NaCl and Wasm have different pointer representations and we must
-  translate or swizzle these pointers accordingly.
+  translate (swizzle) these pointers accordingly.
 - Ensure that multiple threads can't invoke the callback on the same image,
   otherwise we have a data race that results in a use-after-free vulnerability.
 
